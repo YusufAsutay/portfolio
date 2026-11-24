@@ -11,7 +11,8 @@
 #   3) Siteyi derler → dist/ klasörü oluşur    (npm run build)
 #   4) dist/ içeriğini Apache'nin yayınladığı klasöre kopyalar (rsync)
 #
-# Yayın klasörü varsayılan olarak /var/www/html. Farklıysa şöyle çalıştır:
+# Yayın klasörü: Apache ayarındaki DocumentRoot (sites-enabled/yusufasty.com.tr*.conf).
+# Farklı bir klasöre yayınlamak gerekirse şöyle çalıştır:
 #   WEB_ROOT=/var/www/baska-klasor bash ~/portfolio/scripts/deploy.sh
 # =====================================================================
 
@@ -22,7 +23,7 @@ set -euo pipefail
 
 # Deponun kök klasörü: bu betiğin bulunduğu klasörün bir üstü
 REPO_DIR="$(cd "$(dirname "$0")/.." && pwd)"
-WEB_ROOT="${WEB_ROOT:-/var/www/html}"
+WEB_ROOT="${WEB_ROOT:-/var/www/yusufasty.com.tr/html}"
 
 cd "$REPO_DIR"
 

@@ -48,4 +48,4 @@ Akış: **bilgisayar → GitHub → sunucu**.
    `bash ~/portfolio/scripts/deploy.sh`
 
 Betik sırasıyla `git pull`, `npm ci`, `npm run build` çalıştırır ve `dist/` içeriğini
-Apache'nin yayın klasörüne (`/var/www/html`) kopyalar.
+Apache'nin yayın klasörüne (`/var/www/yusufasty.com.tr/html`) kopyalar.
