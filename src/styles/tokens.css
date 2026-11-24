@@ -1,0 +1,150 @@
+/* =====================================================================
+   TASARIM DEĞİŞKENLERİ (design tokens)
+   ---------------------------------------------------------------------
+   Sitedeki bütün renkler, yazı tipleri, boyutlar ve boşluklar burada.
+   Bileşenler "#e38b4f" gibi kodlar yerine var(--accent) gibi değişkenler
+   kullanır; bir rengi değiştirmek için bu dosyada tek satır yeterli olur.
+   ===================================================================== */
+
+:root {
+  /* ---- Yazı tipleri ----
+     Font dosyaları npm paketinden gelir ve sitenin içine kopyalanır;
+     ziyaretçinin tarayıcısı Google'a hiç istek atmaz. Virgülden sonrakiler,
+     font yüklenemezse kullanılacak yedeklerdir. */
+  --font-sans: 'Archivo Variable', system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
+  --font-mono: 'JetBrains Mono Variable', ui-monospace, 'Cascadia Code', Consolas, monospace;
+
+  /* ---- Akışkan yazı boyutları ----
+     clamp(EN KÜÇÜK, TERCİH EDİLEN, EN BÜYÜK): ekran genişledikçe (vw) büyür
+     ama sınırların dışına çıkmaz. Mobil ve masaüstü için ayrı boyut yazmayız. */
+  --fs-xs: 0.78rem;
+  --fs-sm: 0.875rem;
+  --fs-base: 1rem;
+  --fs-lead: clamp(1.05rem, 0.98rem + 0.35vw, 1.2rem);
+  --fs-h3: clamp(1.15rem, 1.05rem + 0.5vw, 1.4rem);
+  --fs-h2: clamp(2rem, 1.35rem + 2.6vw, 3.25rem);
+  --fs-slogan: clamp(1.35rem, 1.1rem + 1.2vw, 2.05rem);
+  --fs-display: clamp(3rem, 1.4rem + 6.2vw, 6.75rem);
+
+  /* ---- Boşluk ölçeği ---- */
+  --space-1: 0.25rem;
+  --space-2: 0.5rem;
+  --space-3: 0.75rem;
+  --space-4: 1rem;
+  --space-5: 1.5rem;
+  --space-6: 2rem;
+  --space-7: 3rem;
+  --space-8: 4.5rem;
+  --space-9: 7rem;
+
+  /* ---- Köşe yarıçapları: donanım hissi için küçük tutuldu ---- */
+  --radius-s: 4px;
+  --radius-m: 8px;
+  --radius-l: 14px;
+
+  /* ---- Yerleşim ---- */
+  --container: 1200px;
+  --gutter: clamp(16px, 4vw, 40px);
+  --header-h: 68px;
+
+  /* ---- Hareket eğrisi: hızlı başla, yumuşak dur ---- */
+  --ease-out: cubic-bezier(0.2, 0.7, 0.2, 1);
+}
+
+/* =====================================================================
+   TEMALAR
+   <html data-theme="dark | light"> hangi temanın aktif olduğunu belirler.
+   Ziyaretçi menüdeki anahtarla değiştirir, seçimi tarayıcıda saklanır.
+   Yorumlardaki oranlar yazının zemine göre kontrastıdır (WCAG: en az 4.5:1).
+   ===================================================================== */
+
+/* ---- Koyu tema: "Bakır & Grafit" (varsayılan) ---- */
+:root,
+:root[data-theme='dark'] {
+  color-scheme: dark; /* kaydırma çubuğu ve form alanları da koyu olsun */
+
+  --bg: #12110f;
+  --bg-elev: #1a1815; /* kart gibi "yükseltilmiş" yüzeyler */
+  --bg-elev-2: #221f1b;
+  --line: #2c2823; /* ince çizgiler, kenarlıklar */
+  --line-strong: #3f3831;
+  --text: #ede7df; /* ana metin   15.4:1 */
+  --text-muted: #a79f94; /* ikincil     7.2:1 */
+  --text-faint: #7a7268; /* dekoratif   4.0:1 */
+  --accent: #e38b4f; /* bakır       7.3:1 */
+  --accent-strong: #f2a46e;
+  --accent-ink: #1a0f07; /* bakır zeminli butonun yazısı */
+  --accent-2: #7db8a4; /* bakırın pası (verdigris) */
+  --ok: #5ad18a; /* "müsait / çalışıyor" LED'i */
+  --danger: #ef7a6e; /* hatalı form alanı */
+  --glow: 227 139 79; /* rgb(var(--glow) / 0.2) şeklinde saydam kullanmak için */
+  --glow-strength: 0.2;
+
+  /* devre kartı çizimleri */
+  --trace: #3a2b20;
+  --pulse: #ffb07a;
+  --pad: #c98552;
+  --silk: #6f675e;
+  --chip: #0b0a09;
+  --chip-edge: #2e2924;
+
+  /* CAN monitörü (terminal paneli) */
+  --monitor-bg: #0c0b0a;
+  --monitor-text: #e9e2d8;
+  --monitor-accent: #f2a46e;
+
+  /* yetenek grupları: bacak numarası kutularının rengi */
+  --g-mcu: #e38b4f; /* gömülü & mikrodenetleyici */
+  --g-bus: #d9b25c; /* haberleşme */
+  --g-app: #7db8a4; /* masaüstü & arayüz */
+  --g-sys: #93a9d6; /* sistem & veri */
+  --pin-ink: #12110f; /* renkli kutunun içindeki numara (hepsi 7:1 üstü) */
+
+  --bg-pattern:
+    radial-gradient(60rem 40rem at 85% -10%, rgb(227 139 79 / 0.09), transparent 60%),
+    radial-gradient(50rem 35rem at -10% 105%, rgb(125 184 164 / 0.06), transparent 60%);
+}
+
+/* ---- Açık tema: "Datasheet" (kâğıt + mürekkep + sinyal turuncusu) ---- */
+:root[data-theme='light'] {
+  color-scheme: light;
+
+  --bg: #f2efe7;
+  --bg-elev: #fbf9f4;
+  --bg-elev-2: #e9e4d8;
+  --line: #d9d2c3;
+  --line-strong: #bfb5a2;
+  --text: #17191d; /* 15.3:1 */
+  --text-muted: #53585f; /* 6.2:1 */
+  --text-faint: #7c8088; /* 3.5:1 */
+  --accent: #bc410e; /* 4.7:1 */
+  --accent-strong: #a3380b;
+  --accent-ink: #ffffff;
+  --accent-2: #2a55c7; /* teknik çizim mavisi */
+  --ok: #1f8a4c;
+  --danger: #b3261e;
+  --glow: 188 65 14;
+  --glow-strength: 0.1;
+
+  --trace: #d6cbb6;
+  --pulse: #e0531a;
+  --pad: #b8935f;
+  --silk: #8a8e95;
+  --chip: #1b1c1f;
+  --chip-edge: #3a3b40;
+
+  --monitor-bg: #17191d;
+  --monitor-text: #eeeae1;
+  --monitor-accent: #ff9a5c;
+
+  --g-mcu: #bc410e;
+  --g-bus: #8a6300;
+  --g-app: #1d7a61;
+  --g-sys: #2a55c7;
+  --pin-ink: #ffffff; /* beyaz numara, renkli kutuda 5:1 üstü */
+
+  /* milimetrik kâğıt deseni */
+  --bg-pattern:
+    linear-gradient(rgb(23 25 29 / 0.045) 1px, transparent 1px) 0 0 / 28px 28px,
+    linear-gradient(90deg, rgb(23 25 29 / 0.045) 1px, transparent 1px) 0 0 / 28px 28px;
+}

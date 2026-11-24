@@ -1,0 +1,399 @@
+---
+/**
+ * U3 — Yetenekler, bir entegrenin bacak diyagramı (pinout) olarak.
+ * Sol bacaklar donanım tarafı, sağ bacaklar yazılım tarafı; ortadaki çip ikisini birleştiren "ben".
+ * Bacak numaraları gerçek DIP kılıflardaki gibi saat yönünün tersine dolaşır:
+ * solda yukarıdan aşağı 1 → 10, sağda aşağıdan yukarı 11 → 20 (DIP-20 kılıf).
+ * Veriler src/data/skills.ts içinde.
+ */
+import { groups, skills, type GroupId } from '../data/skills';
+
+const sideOf = (id: GroupId) => groups.find((g) => g.id === id)?.side;
+const left = skills.filter((s) => sideOf(s.group) === 'hw');
+const right = skills.filter((s) => sideOf(s.group) === 'sw');
+const total = left.length + right.length;
+
+const leftPins = left.map((s, i) => ({ ...s, pin: i + 1 }));
+const rightPins = right.map((s, i) => ({ ...s, pin: total - i })); // en üstteki bacak = en büyük numara
+---
+
+<section id="yetenekler" class="section" aria-labelledby="yetenekler-title">
+  <div class="container">
+    <p class="eyebrow"><span class="designator">U3</span>Yetenekler</p>
+    <h2 id="yetenekler-title" class="section__title">Bir yanım donanım, bir yanım yazılım.</h2>
+    <p class="section__lead">
+      Sol bacaklar donanıma, sağ bacaklar yazılıma bağlı. Bir gruba dokununca ya da üzerine gelince o grubun
+      bacakları öne çıkar.
+    </p>
+
+    <div class="legend" role="group" aria-label="Yetenek grupları">
+      {
+        groups.map((g) => (
+          <button
+            type="button"
+            class="legend__item"
+            data-group-btn={g.id}
+            aria-pressed="false"
+            style={`--c: var(--g-${g.id})`}
+          >
+            <span class="legend__swatch" aria-hidden="true" />
+            {g.label}
+          </button>
+        ))
+      }
+      <span class="legend__note"><span class="led" aria-hidden="true"></span>Bitirme projesinde kullanıyorum</span>
+    </div>
+
+    <div class="pinout" data-pinout>
+      <div class="pinout__side pinout__side--left">
+        <h3 class="pinout__heading">Donanım</h3>
+        <ul class="pinout__pins">
+          {
+            leftPins.map((s) => (
+              <li class="pin" data-group={s.group} style={`--c: var(--g-${s.group})`}>
+                <span class="pin__name">
+                  {s.active && <span class="led" aria-hidden="true" />}
+                  {s.name}
+                  {s.active && <span class="sr-only"> (bitirme projesinde kullanıyorum)</span>}
+                </span>
+                <span class="pin__num" aria-hidden="true">
+                  {s.pin}
+                </span>
+                <span class="pin__leg" aria-hidden="true" />
+              </li>
+            ))
+          }
+        </ul>
+      </div>
+
+      <div class="pinout__chip" aria-hidden="true">
+        <span class="pinout__notch"></span>
+        <span class="pinout__ref">U3</span>
+        <span class="pinout__mark">YA</span>
+        <span class="pinout__caption">donanım ↔ yazılım</span>
+        <span class="pinout__part">SKILL-{total}</span>
+      </div>
+
+      <div class="pinout__side pinout__side--right">
+        <h3 class="pinout__heading">Yazılım</h3>
+        <ul class="pinout__pins">
+          {
+            rightPins.map((s) => (
+              <li class="pin" data-group={s.group} style={`--c: var(--g-${s.group})`}>
+                <span class="pin__leg" aria-hidden="true" />
+                <span class="pin__num" aria-hidden="true">
+                  {s.pin}
+                </span>
+                <span class="pin__name">
+                  {s.name}
+                  {s.active && <span class="led" aria-hidden="true" />}
+                  {s.active && <span class="sr-only"> (bitirme projesinde kullanıyorum)</span>}
+                </span>
+              </li>
+            ))
+          }
+        </ul>
+      </div>
+    </div>
+  </div>
+</section>
+
+<script>
+  const pinout = document.querySelector<HTMLElement>('[data-pinout]');
+  const buttons = Array.from(document.querySelectorAll<HTMLButtonElement>('[data-group-btn]'));
+  const pins = Array.from(pinout?.querySelectorAll<HTMLElement>('[data-group]') ?? []);
+  let locked: string | null = null; // tıklanarak sabitlenen grup (yoksa null)
+
+  // Verilen grubun bacaklarını öne çıkar, diğerlerini soldur (null: hepsi normal)
+  function highlight(group: string | null) {
+    pinout?.toggleAttribute('data-focus', group !== null);
+    pins.forEach((pin) => pin.classList.toggle('is-lit', pin.dataset.group === group));
+  }
+
+  for (const button of buttons) {
+    const group = button.dataset.groupBtn ?? null;
+
+    // Fareyle üzerine gelince ya da klavyeyle odaklanınca önizle
+    button.addEventListener('pointerenter', () => highlight(group));
+    button.addEventListener('pointerleave', () => highlight(locked));
+    button.addEventListener('focus', () => highlight(group));
+    button.addEventListener('blur', () => highlight(locked));
+
+    // Tıklayınca sabitle, aynı gruba tekrar tıklayınca bırak
+    button.addEventListener('click', () => {
+      locked = locked === group ? null : group;
+      buttons.forEach((b) => b.setAttribute('aria-pressed', String(b.dataset.groupBtn === locked)));
+      highlight(locked);
+    });
+  }
+</script>
+
+<style>
+  /* ---------- Grup düğmeleri ---------- */
+  .legend {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: var(--space-2);
+    margin-top: var(--space-6);
+  }
+
+  .legend__item {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.45rem 0.85rem;
+    border: 1px solid var(--line-strong);
+    border-radius: 999px;
+    background: transparent;
+    color: var(--text-muted);
+    font-size: var(--fs-sm);
+    cursor: pointer;
+    transition:
+      color 0.2s,
+      border-color 0.2s,
+      background-color 0.2s;
+  }
+
+  .legend__item:hover,
+  .legend__item[aria-pressed='true'] {
+    border-color: var(--c);
+    color: var(--text);
+  }
+
+  .legend__item[aria-pressed='true'] {
+    background: color-mix(in srgb, var(--c) 14%, transparent);
+  }
+
+  .legend__swatch {
+    width: 10px;
+    height: 10px;
+    border-radius: 2px;
+    background: var(--c);
+  }
+
+  .legend__note {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    margin-left: auto;
+    color: var(--text-muted);
+    font-family: var(--font-mono);
+    font-size: var(--fs-xs);
+  }
+
+  /* ---------- Bacak diyagramı (masaüstü) ---------- */
+  .pinout {
+    --row: 46px; /* bir bacağın yüksekliği: çip ve listeler bu ölçüye göre hizalanır */
+    display: grid;
+    grid-template-columns: 1fr auto 1fr;
+    margin-top: var(--space-8);
+  }
+
+  .pinout__side {
+    position: relative;
+  }
+
+  /* "Donanım" / "Yazılım" başlıkları listenin üstünde dursun ama hizayı bozmasın */
+  .pinout__heading {
+    position: absolute;
+    bottom: 100%;
+    margin-bottom: var(--space-2);
+    color: var(--text-faint);
+    font-family: var(--font-mono);
+    font-size: var(--fs-xs);
+    font-weight: 500;
+    letter-spacing: 0.16em;
+    text-transform: uppercase;
+  }
+
+  .pinout__side--left .pinout__heading {
+    right: 64px;
+  }
+
+  .pinout__side--right .pinout__heading {
+    left: 64px;
+  }
+
+  .pinout__pins {
+    display: grid;
+    grid-auto-rows: var(--row);
+    margin: 0;
+    padding: calc(var(--row) / 2) 0;
+    list-style: none;
+  }
+
+  .pin {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    transition: opacity 0.25s;
+  }
+
+  .pinout__side--left .pin {
+    justify-content: flex-end;
+  }
+
+  .pin__name {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    font-weight: 500;
+    white-space: nowrap;
+    transition: color 0.2s;
+  }
+
+  .pin__num {
+    display: grid;
+    place-items: center;
+    min-width: 28px;
+    height: 22px;
+    padding: 0 4px;
+    border-radius: 4px;
+    background: var(--c);
+    color: var(--pin-ink);
+    font-family: var(--font-mono);
+    font-size: 11px;
+    font-weight: 700;
+  }
+
+  /* Metal bacak: çipin kenarına değen kısa çubuk */
+  .pin__leg {
+    width: 30px;
+    height: 8px;
+    background: linear-gradient(color-mix(in srgb, var(--pad) 60%, #fff), var(--pad));
+  }
+
+  .pinout__side--left .pin__leg {
+    border-radius: 2px 0 0 2px;
+  }
+
+  .pinout__side--right .pin__leg {
+    border-radius: 0 2px 2px 0;
+  }
+
+  .pin:hover .pin__name,
+  .pin.is-lit .pin__name {
+    color: var(--c);
+  }
+
+  /* Bir grup seçiliyken diğer bacaklar soluklaşır */
+  .pinout[data-focus] .pin:not(.is-lit) {
+    opacity: 0.25;
+  }
+
+  /* ---------- Ortadaki çip ---------- */
+  .pinout__chip {
+    position: relative;
+    display: grid;
+    place-content: center;
+    justify-items: center;
+    gap: 0.6rem;
+    width: clamp(180px, 17vw, 230px);
+    border: 1px solid var(--chip-edge);
+    border-radius: 10px;
+    background: linear-gradient(160deg, color-mix(in srgb, var(--chip), #fff 9%), var(--chip));
+    box-shadow: 0 30px 60px -30px rgb(0 0 0 / 0.6);
+    color: rgb(255 255 255 / 0.55);
+    font-family: var(--font-mono);
+  }
+
+  /* DIP kılıfın üstündeki yarım daire çentik: 1 numaralı bacağın tarafını gösterir */
+  .pinout__notch {
+    position: absolute;
+    top: -1px;
+    left: 50%;
+    width: 34px;
+    height: 17px;
+    translate: -50% 0;
+    border: 1px solid var(--chip-edge);
+    border-top: 0;
+    border-radius: 0 0 17px 17px;
+    background: var(--bg);
+  }
+
+  .pinout__ref {
+    position: absolute;
+    top: 14px;
+    left: 14px;
+    font-size: 11px;
+    letter-spacing: 0.1em;
+  }
+
+  .pinout__mark {
+    color: var(--accent);
+    font-family: var(--font-sans);
+    font-size: clamp(2.6rem, 4vw, 3.6rem);
+    font-weight: 800;
+    font-stretch: 125%;
+    letter-spacing: -0.04em;
+    line-height: 1;
+  }
+
+  .pinout__caption {
+    font-size: 11px;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+  }
+
+  .pinout__part {
+    position: absolute;
+    right: 14px;
+    bottom: 12px;
+    font-size: 10px;
+    letter-spacing: 0.1em;
+    opacity: 0.7;
+  }
+
+  /* ---------- Tablet ve telefon: çip üstte, bacaklar iki liste ---------- */
+  @media (max-width: 859px) {
+    .pinout {
+      grid-template-columns: 1fr 1fr;
+      gap: var(--space-6) var(--space-5);
+      margin-top: var(--space-7);
+    }
+
+    .pinout__chip {
+      grid-column: 1 / -1;
+      order: -1;
+      grid-auto-flow: column;
+      align-items: center;
+      gap: var(--space-4);
+      width: auto;
+      height: 96px;
+    }
+
+    .pinout__heading {
+      position: static;
+      margin-bottom: var(--space-3);
+    }
+
+    .pinout__pins {
+      grid-auto-rows: auto;
+      gap: var(--space-2);
+      padding: 0;
+    }
+
+    .pinout__side--left .pin {
+      justify-content: flex-start;
+    }
+
+    .pinout__side--left .pin__name {
+      flex-direction: row-reverse; /* LED, adın sağında dursun (iki listede aynı) */
+    }
+
+    .pin__num {
+      order: -1;
+    }
+
+    .pin__leg {
+      display: none;
+    }
+  }
+
+  @media (max-width: 540px) {
+    .pinout {
+      grid-template-columns: 1fr;
+    }
+  }
+</style>

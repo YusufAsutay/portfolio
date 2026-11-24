@@ -1,0 +1,253 @@
+---
+/**
+ * Bitirme projemdeki BMS'in CAN-Bus trafiğini taklit eden canlı log paneli.
+ * İlk satırlar derleme anında HTML olarak üretilir. Tarayıcıda JavaScript
+ * çalışınca her ~0,9 saniyede yeni bir çerçeve eklenir. JavaScript kapalıysa
+ * ya da ziyaretçi "hareketi azalt" seçtiyse ilk satırlar sabit kalır.
+ */
+import { signals, encode, formatId, formatValue } from '../data/can';
+import { about } from '../data/profile';
+
+const UPTIME = 1284.207; // log saatinin başlangıcı (saniye)
+const STEP = 0.183; // ilk satırlar arasındaki zaman farkı
+
+const initial = signals.map((s, i) => ({
+  t: (UPTIME + i * STEP).toFixed(3),
+  id: formatId(s.id),
+  data: encode(s, s.value).join(' '),
+  label: s.label,
+  value: formatValue(s, s.value),
+}));
+---
+
+<figure class="monitor" data-can-monitor data-clock={UPTIME + signals.length * STEP}>
+  <div class="monitor__bar">
+    <span class="monitor__led" aria-hidden="true"></span>
+    <span>can0 · BMS_NODE_01</span>
+    <span class="monitor__rate">500 kbit/s</span>
+  </div>
+
+  <!-- Ekran okuyucuya kapalı: her saniye değişen sayıları okumak ziyaretçiyi yorar -->
+  <ol class="monitor__log" aria-hidden="true" data-can-log>
+    {
+      initial.map((f) => (
+        <li>
+          <span class="t">{f.t}</span>
+          <span class="id">{f.id}</span>
+          <span class="data">{f.data}</span>
+          <span class="val">
+            <span class="lbl">{f.label}</span> {f.value}
+          </span>
+        </li>
+      ))
+    }
+  </ol>
+
+  <figcaption class="monitor__caption">
+    <a href="#projeler">
+      <span>Bitirme projem: {about.capstone}</span>
+      <span aria-hidden="true">→</span>
+    </a>
+  </figcaption>
+</figure>
+
+<script>
+  import { signals, encode, formatId, formatValue, drift } from '../data/can';
+
+  const monitor = document.querySelector<HTMLElement>('[data-can-monitor]');
+  const log = monitor?.querySelector<HTMLOListElement>('[data-can-log]');
+  const reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+  if (monitor && log && !reduceMotion) {
+    const MAX_LINES = 6;
+    let clock = Number(monitor.dataset.clock);
+    let index = 0;
+    let timer: number | undefined;
+    let onScreen = false;
+
+    // Küçük yardımcı: sınıfı ve metni verilen bir <span> üretir.
+    // innerHTML yerine textContent kullanmak iyi bir güvenlik alışkanlığıdır.
+    const span = (className: string, text: string) => {
+      const el = document.createElement('span');
+      el.className = className;
+      el.textContent = text;
+      return el;
+    };
+
+    // Her "tık"ta sıradaki sinyali güncelleyip log'a yeni satır ekle
+    const tick = () => {
+      const signal = signals[index++ % signals.length];
+      const value = drift(signal);
+      clock += 0.15 + Math.random() * 0.3;
+
+      const val = span('val', ' ' + formatValue(signal, value));
+      val.prepend(span('lbl', signal.label));
+
+      const line = document.createElement('li');
+      line.className = 'is-new';
+      line.append(
+        span('t', clock.toFixed(3)),
+        span('id', formatId(signal.id)),
+        span('data', encode(signal, value).join(' ')),
+        val,
+      );
+      log.append(line);
+
+      // En fazla MAX_LINES satır kalsın: en eskisini sil
+      while (log.children.length > MAX_LINES) log.firstElementChild?.remove();
+    };
+
+    const start = () => {
+      if (timer === undefined) timer = window.setInterval(tick, 900);
+    };
+    const stop = () => {
+      window.clearInterval(timer);
+      timer = undefined;
+    };
+
+    // Panel ekranda değilse ya da sekme arka plandaysa boşuna çalışmasın (pil ve işlemci dostu)
+    const update = () => (onScreen && !document.hidden ? start() : stop());
+    new IntersectionObserver(([entry]) => {
+      onScreen = entry.isIntersecting;
+      update();
+    }).observe(monitor);
+    document.addEventListener('visibilitychange', update);
+  }
+</script>
+
+<style>
+  .monitor {
+    position: relative;
+    z-index: 1;
+    width: min(100%, 390px);
+    /* Çipin alt kısmındaki yolların üzerine hafifçe binsin (yüzde = kapsayıcı genişliğine göre) */
+    margin: -11% auto 0;
+    overflow: hidden;
+    border: 1px solid color-mix(in srgb, var(--monitor-text) 14%, transparent);
+    border-radius: var(--radius-l);
+    background: var(--monitor-bg);
+    color: var(--monitor-text);
+    box-shadow: 0 30px 60px -28px rgb(0 0 0 / 0.65);
+    font-family: var(--font-mono);
+    font-size: 12px;
+  }
+
+  .monitor__bar {
+    display: flex;
+    align-items: center;
+    gap: 0.6rem;
+    padding: 0.65rem 0.95rem;
+    border-bottom: 1px solid color-mix(in srgb, var(--monitor-text) 12%, transparent);
+    color: color-mix(in srgb, var(--monitor-text) 72%, transparent);
+  }
+
+  /* "Veri gönderiliyor" LED'i */
+  .monitor__led {
+    width: 7px;
+    height: 7px;
+    border-radius: 50%;
+    background: var(--ok);
+    box-shadow: 0 0 8px var(--ok);
+    animation: blink 1.1s steps(1) infinite;
+  }
+
+  @keyframes blink {
+    50% {
+      opacity: 0.25;
+    }
+  }
+
+  .monitor__rate {
+    margin-left: auto;
+    opacity: 0.7;
+  }
+
+  /* Sabit yükseklik: satırlar eklenip silinirken sayfa zıplamasın */
+  .monitor__log {
+    display: grid;
+    align-content: end;
+    gap: 0.2rem;
+    height: 150px;
+    margin: 0;
+    padding: 0.65rem 0.95rem;
+    overflow: hidden;
+    list-style: none;
+  }
+
+  /* JavaScript'in sonradan eklediği satırlar, Astro'nun stil kapsamı (scope)
+     etiketini taşımaz; bu yüzden satır stillerini :global() ile yazıyoruz. */
+  .monitor__log :global(li) {
+    display: grid;
+    grid-template-columns: 8ch 5ch 8ch 1fr;
+    gap: 1ch;
+    border-radius: 3px;
+    line-height: 1.55;
+    white-space: nowrap;
+  }
+
+  .monitor__log :global(.t) {
+    opacity: 0.4;
+  }
+
+  .monitor__log :global(.id) {
+    color: var(--monitor-accent);
+  }
+
+  .monitor__log :global(.data) {
+    opacity: 0.75;
+  }
+
+  .monitor__log :global(.val) {
+    overflow: hidden;
+    text-align: right;
+    text-overflow: ellipsis;
+  }
+
+  .monitor__log :global(.lbl) {
+    opacity: 0.55;
+  }
+
+  .monitor__log :global(.is-new) {
+    animation: flash 1.2s var(--ease-out);
+  }
+
+  @keyframes flash {
+    from {
+      background: rgb(var(--glow) / 0.25);
+    }
+    to {
+      background: transparent;
+    }
+  }
+
+  .monitor__caption {
+    border-top: 1px solid color-mix(in srgb, var(--monitor-text) 12%, transparent);
+    font-family: var(--font-sans);
+    font-size: var(--fs-sm);
+  }
+
+  .monitor__caption a {
+    display: flex;
+    justify-content: space-between;
+    gap: 1rem;
+    padding: 0.7rem 0.95rem;
+    color: var(--monitor-text);
+    text-decoration: none;
+    transition: color 0.2s;
+  }
+
+  .monitor__caption a:hover {
+    color: var(--monitor-accent);
+  }
+
+  /* Dar telefonlarda zaman sütununu gizle */
+  @media (max-width: 420px) {
+    .monitor__log :global(li) {
+      grid-template-columns: 5ch 8ch 1fr;
+    }
+
+    .monitor__log :global(.t) {
+      display: none;
+    }
+  }
+</style>

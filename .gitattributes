@@ -1,0 +1,3 @@
+# Windows'ta yazılan kabuk betikleri Linux sunucuda çalışsın diye satır sonları her zaman LF olsun.
+# (Windows CRLF kullanır; bash, CRLF'li betikte "$'\r': command not found" hatası verir.)
+*.sh text eol=lf

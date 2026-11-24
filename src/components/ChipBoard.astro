@@ -1,0 +1,324 @@
+---
+/**
+ * U1 — Fotoğrafımı taşıyan mikrodenetleyici (QFP kılıf) çizimi.
+ *
+ * Bütün geometri 600×600 birimlik bir SVG koordinat sisteminde (viewBox)
+ * hesaplanıyor. SVG kare bir kutuya ölçeklendiği için fotoğraf penceresini
+ * HTML tarafında yüzdeyle tam üstüne oturtabiliyoruz: 156 / 600 = %26.
+ * Yollar derleme anında (bilgisayarında, Node.js'te) üretilir; tarayıcıya hazır SVG gider.
+ */
+import { profile } from '../data/profile';
+
+interface Props {
+  /** Fotoğraf henüz yoksa yerine monogram (YA) gösterilir */
+  photo?: { src: string; alt: string };
+}
+
+const { photo } = Astro.props;
+
+// ---- Geometri (SVG birimi) ----
+const SIZE = 600; // viewBox kenarı
+const C = SIZE / 2; // merkez: 300
+const BODY = 320; // çip gövdesinin kenarı
+const B0 = C - BODY / 2; // gövdenin sol/üst kenarı: 140
+const B1 = C + BODY / 2; // gövdenin sağ/alt kenarı: 460
+const DIE_INSET = 16; // fotoğraf penceresinin gövde kenarına uzaklığı
+const PINS = 10; // kenar başına bacak sayısı
+const PITCH = 28; // bacaklar arası mesafe
+const PIN_W = 12; // bacak genişliği
+const PIN_L = 18; // bacak uzunluğu
+const diePercent = ((B0 + DIE_INSET) / SIZE) * 100; // 26
+
+// Bacak merkezlerinin kenar boyunca konumları: 174, 202, …, 426
+const pinCenters = Array.from({ length: PINS }, (_, i) => C - ((PINS - 1) * PITCH) / 2 + i * PITCH);
+
+// ---- Tohumlu sözde-rastgele sayı üreteci (mulberry32) ----
+// Math.random() her derlemede başka sonuç verirdi. Tohumlu üreteç hep aynı
+// "rastgele" deseni üretir, böylece çizim her yayında aynı kalır.
+function seeded(seed: number) {
+  return () => {
+    seed = (seed + 0x6d2b79f5) | 0;
+    let t = Math.imul(seed ^ (seed >>> 15), 1 | seed);
+    t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t;
+    return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+  };
+}
+const rand = seeded(2026);
+
+type Point = [number, number];
+
+// Noktayı merkez etrafında çeyrek tur (90°) katları kadar döndürür.
+// Yolları yalnızca üst kenar için hesaplayıp diğer üç kenara döndürerek kopyalıyoruz.
+function rotate([x, y]: Point, quarterTurns: number): Point {
+  const a = (quarterTurns * Math.PI) / 2;
+  const dx = x - C;
+  const dy = y - C;
+  return [Math.round(C + dx * Math.cos(a) - dy * Math.sin(a)), Math.round(C + dx * Math.sin(a) + dy * Math.cos(a))];
+}
+
+interface Trace {
+  d: string; // SVG yol tanımı: "M x y L x y …"
+  via?: Point; // yol bir via (kart katmanları arasındaki delik) ile bitiyorsa konumu
+  pulse: boolean; // üzerinde ışık darbesi aksın mı
+  style: string; // darbenin süre / gecikme / yön değişkenleri
+}
+
+const traces: Trace[] = [];
+
+for (let side = 0; side < 4; side++) {
+  pinCenters.forEach((x, i) => {
+    if (rand() < 0.3) return; // bazı bacaklar boşta kalsın, desen doğal görünsün
+
+    const k = Math.abs(i - (PINS - 1) / 2); // bacağın merkeze uzaklığı: 0.5 … 4.5
+    const dir = i < PINS / 2 ? -1 : 1; // sol yarı sola, sağ yarı sağa açılır (yelpaze)
+    const yPin = B0 - PIN_L; // bacağın ucu
+    const yBend = yPin - 14; // önce 14 birim dik çık
+    const offset = Math.round(k * 10); // sonra 45° çapraz: dışa doğru kayma miktarı
+    const yDiag = yBend - offset;
+    let yEnd = yDiag - 12 - Math.round(rand() * 38); // en son yine dik devam et
+    const exits = yEnd < 24; // kenara çok yaklaştıysa karttan çıkıp gitsin
+    if (exits) yEnd = -12;
+
+    const points = (
+      [
+        [x, yPin],
+        [x, yBend],
+        [x + dir * offset, yDiag],
+        [x + dir * offset, yEnd],
+      ] as Point[]
+    ).map((p) => rotate(p, side));
+
+    traces.push({
+      d: 'M' + points.map(([px, py]) => `${px} ${py}`).join(' L'),
+      via: exits ? undefined : points[points.length - 1],
+      pulse: rand() < 0.45,
+      style: `--dur: ${(2.6 + rand() * 2.4).toFixed(2)}s; --delay: ${(-rand() * 5).toFixed(2)}s; --dir: ${rand() < 0.5 ? 'normal' : 'reverse'}`,
+    });
+  });
+}
+
+// Bacak dikdörtgenleri: her bacak merkezi için üst, sağ, alt ve sol kenar
+const pins = pinCenters.flatMap((p) => [
+  { x: p - PIN_W / 2, y: B0 - PIN_L, w: PIN_W, h: PIN_L },
+  { x: B1, y: p - PIN_W / 2, w: PIN_L, h: PIN_W },
+  { x: p - PIN_W / 2, y: B1, w: PIN_W, h: PIN_L },
+  { x: B0 - PIN_L, y: p - PIN_W / 2, w: PIN_L, h: PIN_W },
+]);
+
+const pulses = traces.filter((t) => t.pulse);
+const vias = traces.flatMap((t) => (t.via ? [t.via] : []));
+---
+
+<div class="board">
+  <svg class="board__svg" viewBox={`0 0 ${SIZE} ${SIZE}`} aria-hidden="true" focusable="false">
+    <defs>
+      <radialGradient id="board-glow">
+        <stop offset="0" class="glow-in"></stop>
+        <stop offset="1" class="glow-out"></stop>
+      </radialGradient>
+      <!-- Yolları kenarlara doğru soldurmak için maske (beyaz = görünür, siyah = gizli) -->
+      <radialGradient id="board-fade">
+        <stop offset="0.74" stop-color="#fff"></stop>
+        <stop offset="1" stop-color="#000"></stop>
+      </radialGradient>
+      <mask id="board-mask">
+        <rect width={SIZE} height={SIZE} fill="url(#board-fade)"></rect>
+      </mask>
+      <linearGradient id="pin-metal" x1="0" y1="0" x2="1" y2="1">
+        <stop offset="0" class="metal-a"></stop>
+        <stop offset="1" class="metal-b"></stop>
+      </linearGradient>
+    </defs>
+
+    <!-- Çipin arkasındaki yumuşak ışıma -->
+    <circle cx={C} cy={C} r={C} fill="url(#board-glow)"></circle>
+
+    <!-- Bakır yollar, üzerlerinde akan sinyal darbeleri ve via'lar -->
+    <g mask="url(#board-mask)">
+      <g class="traces">
+        {traces.map((t) => <path d={t.d} />)}
+      </g>
+      <g class="pulses">
+        {pulses.map((t) => <path d={t.d} pathLength="100" style={t.style} />)}
+      </g>
+      <g class="vias">
+        {vias.map(([cx, cy]) => <circle cx={cx} cy={cy} r="5" />)}
+      </g>
+    </g>
+
+    <!-- Çipin bacakları ve gövdesi -->
+    <g class="pins">
+      {pins.map((p) => <rect x={p.x} y={p.y} width={p.w} height={p.h} rx="2" />)}
+    </g>
+    <rect class="chip-body" x={B0} y={B0} width={BODY} height={BODY} rx="14"></rect>
+    <rect class="chip-bevel" x={B0 + 5} y={B0 + 5} width={BODY - 10} height={BODY - 10} rx="10"></rect>
+    <circle class="chip-dot" cx={B0 + 9} cy={B0 + 9} r="3.2"></circle>
+
+    <!-- Serigrafi: kartın üzerine basılı parça etiketleri -->
+    <text class="silk" x={B0 - 42} y={B0 - 24}>U1</text>
+    <text class="silk" x={B1 + 10} y={B1 + 40}>REV 4</text>
+  </svg>
+
+  <!-- Fotoğraf penceresi ("die"): SVG'deki çip gövdesinin tam ortasına oturur -->
+  <div class="board__die" style={`inset: ${diePercent}%`}>
+    {
+      photo ? (
+        <img src={photo.src} alt={photo.alt} width="600" height="600" decoding="async" />
+      ) : (
+        <div class="board__placeholder">
+          <span class="board__monogram" aria-hidden="true">
+            {profile.initials}
+          </span>
+          <span class="board__hint">fotoğraf yakında</span>
+        </div>
+      )
+    }
+  </div>
+</div>
+
+<style>
+  .board {
+    position: relative;
+    width: min(100%, 520px);
+    aspect-ratio: 1;
+    margin-inline: auto;
+    /* İçerideki yazılar kartın genişliğine göre ölçeklensin (cqi birimi) */
+    container-type: inline-size;
+  }
+
+  .board__svg {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+  }
+
+  /* SVG'deki renk duraklarına (stop) CSS değişkenleriyle renk veriyoruz */
+  .glow-in {
+    stop-color: rgb(var(--glow));
+    stop-opacity: var(--glow-strength);
+  }
+
+  .glow-out {
+    stop-color: rgb(var(--glow));
+    stop-opacity: 0;
+  }
+
+  .metal-a {
+    stop-color: var(--pad);
+  }
+
+  .metal-b {
+    stop-color: color-mix(in srgb, var(--pad) 65%, #fff);
+  }
+
+  .traces path {
+    fill: none;
+    stroke: var(--trace);
+    stroke-width: 3;
+    stroke-linecap: round;
+    stroke-linejoin: round;
+  }
+
+  /* Darbe: yol üzerinde kayan kısa, parlak bir çizgi parçası.
+     pathLength="100" sayesinde her yolun boyu 100 birim sayılır:
+     10 birim çizgi + 190 birim boşluk → darbe yolu geçer, sonra bir süre görünmez. */
+  .pulses path {
+    fill: none;
+    stroke: var(--pulse);
+    stroke-width: 3;
+    stroke-linecap: round;
+    stroke-dasharray: 10 190;
+    stroke-dashoffset: 10;
+    filter: drop-shadow(0 0 4px var(--pulse));
+  }
+
+  @media (prefers-reduced-motion: no-preference) {
+    .pulses path {
+      animation: travel var(--dur) linear var(--delay) infinite var(--dir);
+    }
+  }
+
+  @keyframes travel {
+    to {
+      stroke-dashoffset: -190;
+    }
+  }
+
+  .vias circle {
+    fill: var(--bg);
+    stroke: var(--pad);
+    stroke-width: 2.2;
+  }
+
+  .pins rect {
+    fill: url(#pin-metal);
+  }
+
+  .chip-body {
+    fill: var(--chip);
+    stroke: var(--chip-edge);
+    stroke-width: 1.5;
+  }
+
+  .chip-bevel {
+    fill: none;
+    stroke: color-mix(in srgb, var(--chip-edge) 70%, transparent);
+  }
+
+  .chip-dot {
+    fill: var(--pad);
+  }
+
+  .silk {
+    font-family: var(--font-mono);
+    font-size: 16px;
+    font-weight: 600;
+    letter-spacing: 0.1em;
+    fill: var(--silk);
+  }
+
+  .board__die {
+    position: absolute;
+    overflow: hidden;
+    border-radius: 6px;
+    box-shadow:
+      0 0 0 1px var(--chip-edge),
+      0 0 40px -10px rgb(var(--glow) / 0.5);
+  }
+
+  .board__die img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+  }
+
+  .board__placeholder {
+    display: grid;
+    place-content: center;
+    justify-items: center;
+    gap: 0.5rem;
+    width: 100%;
+    height: 100%;
+    background:
+      radial-gradient(circle at 30% 20%, rgb(var(--glow) / 0.28), transparent 60%),
+      linear-gradient(150deg, color-mix(in srgb, var(--chip), #fff 10%), var(--chip));
+  }
+
+  .board__monogram {
+    font-size: 15cqi;
+    font-weight: 800;
+    font-stretch: 125%;
+    line-height: 1;
+    letter-spacing: -0.04em;
+    color: var(--accent);
+  }
+
+  .board__hint {
+    font-family: var(--font-mono);
+    font-size: max(10px, 2.2cqi);
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    color: rgb(255 255 255 / 0.5);
+  }
+</style>

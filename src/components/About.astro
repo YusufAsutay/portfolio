@@ -1,0 +1,334 @@
+---
+/**
+ * U2 — Hakkımda.
+ * Solda hikâye; sağda kişisel bir "veri sayfası" (datasheet). Datasheet, elektronik
+ * bir parçanın teknik özelliklerini listeleyen belgedir; burada parça benim.
+ * Altta hedefler. Bütün metinler src/data/profile.ts içinde.
+ */
+import { profile, about } from '../data/profile';
+import { splitHyphenated } from '../utils/text';
+
+const { education } = profile;
+
+// Veri sayfasındaki "parametre: değer" satırları
+const specs = [
+  { label: 'Üniversite', value: education.university },
+  { label: 'Bölüm', value: education.department },
+  { label: 'Sınıf', value: `${education.year}. sınıf` },
+  { label: 'Mezuniyet', value: String(education.graduation) },
+  { label: 'Odak', value: about.focus },
+  { label: 'Bitirme projesi', value: about.capstone },
+];
+
+// Pil göstergesi: her hücre bir sınıf. Bitenler dolu, içinde bulunulan "şarj oluyor"
+const cells = [1, 2, 3, 4].map((n) => ({
+  n,
+  state: n < education.year ? 'full' : n === education.year ? 'charging' : 'empty',
+}));
+---
+
+<section id="hakkimda" class="section" aria-labelledby="hakkimda-title">
+  <div class="container">
+    <div class="about">
+      <div class="about__story">
+        <p class="eyebrow"><span class="designator">U2</span>Hakkımda</p>
+        <h2 id="hakkimda-title" class="section__title">{about.title}</h2>
+        {
+          about.paragraphs.map((text, i) => (
+            <p class:list={['about__text', { 'about__text--first': i === 0 }]}>
+              {splitHyphenated(text).map((part, j) => (j % 2 ? <span class="nowrap">{part}</span> : part))}
+            </p>
+          ))
+        }
+      </div>
+
+      <aside class="sheet" aria-label="Kısa bilgiler">
+        <div class="sheet__head">
+          <span class="sheet__part">YA-{education.graduation}</span>
+          <span>Veri sayfası · Rev 4.0</span>
+        </div>
+
+        <p class="sheet__section">Genel özellikler</p>
+        <dl class="sheet__specs">
+          {
+            specs.map((s) => (
+              <div class="sheet__row">
+                <dt>{s.label}</dt>
+                <dd>{splitHyphenated(s.value).map((part, j) => (j % 2 ? <span class="nowrap">{part}</span> : part))}</dd>
+              </div>
+            ))
+          }
+        </dl>
+
+        <p class="sheet__section">Eğitim durumu</p>
+        <div
+          class="battery"
+          role="img"
+          aria-label={`Eğitim durumu: ${education.year}. sınıf, ${education.graduation} yılında mezuniyet`}
+        >
+          <div class="battery__cells">
+            {
+              cells.map((c) => (
+                <span class={`battery__cell is-${c.state}`}>
+                  <span class="battery__label">{c.n}</span>
+                </span>
+              ))
+            }
+          </div>
+          <span class="battery__cap"></span>
+        </div>
+        <p class="sheet__note">
+          {education.year}. sınıf şarj oluyor · mezuniyet {education.graduation}
+        </p>
+      </aside>
+    </div>
+
+    <h3 class="goals__title">Hedeflerim</h3>
+    <ol class="goals">
+      {
+        about.goals.map((goal, i) => (
+          <li class="goal">
+            <span class="goal__num" aria-hidden="true">
+              {String(i + 1).padStart(2, '0')}
+            </span>
+            <h4 class="goal__title">{goal.title}</h4>
+            <p class="goal__text">
+              {splitHyphenated(goal.text).map((part, j) => (j % 2 ? <span class="nowrap">{part}</span> : part))}
+            </p>
+          </li>
+        ))
+      }
+    </ol>
+  </div>
+</section>
+
+<style>
+  .about {
+    display: grid;
+    gap: var(--space-7);
+    align-items: start;
+  }
+
+  @media (min-width: 960px) {
+    .about {
+      grid-template-columns: minmax(0, 1.15fr) minmax(0, 0.85fr);
+      gap: var(--space-8);
+    }
+
+    /* Kartın üst kenarı başlıkla aynı hizada başlasın */
+    .sheet {
+      margin-top: var(--space-6);
+    }
+  }
+
+  .about__text {
+    max-width: 62ch;
+    margin-top: var(--space-5);
+    font-size: var(--fs-lead);
+    color: var(--text-muted);
+  }
+
+  .about__text--first {
+    color: var(--text);
+  }
+
+  /* ---------- Veri sayfası kartı ---------- */
+  .sheet {
+    overflow: hidden;
+    border: 1px solid var(--line-strong);
+    border-radius: var(--radius-l);
+    background: var(--bg-elev);
+    box-shadow: 0 30px 60px -40px rgb(0 0 0 / 0.5);
+    font-size: var(--fs-sm);
+  }
+
+  /* Ters renkli başlık şeridi: gerçek datasheet'lerdeki gibi */
+  .sheet__head {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: space-between;
+    gap: var(--space-2) var(--space-4);
+    padding: 0.75rem 1.1rem;
+    background: var(--text);
+    color: var(--bg);
+    font-family: var(--font-mono);
+    font-size: var(--fs-xs);
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+  }
+
+  .sheet__part {
+    font-weight: 700;
+  }
+
+  .sheet__section {
+    padding: 1.1rem 1.1rem 0.35rem;
+    color: var(--accent);
+    font-family: var(--font-mono);
+    font-size: var(--fs-xs);
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+  }
+
+  .sheet__specs {
+    margin: 0;
+    padding: 0 1.1rem;
+  }
+
+  .sheet__row {
+    display: grid;
+    grid-template-columns: 8.5rem 1fr;
+    gap: var(--space-4);
+    padding: 0.55rem 0;
+    border-bottom: 1px dashed var(--line);
+  }
+
+  .sheet__row dt {
+    padding-top: 0.15em;
+    color: var(--text-faint);
+    font-family: var(--font-mono);
+    font-size: var(--fs-xs);
+  }
+
+  .sheet__row dd {
+    margin: 0;
+    font-weight: 500;
+  }
+
+  /* ---------- Pil göstergesi ---------- */
+  .battery {
+    display: flex;
+    align-items: center;
+    gap: 3px;
+    margin: 0.35rem 1.1rem 0;
+  }
+
+  .battery__cells {
+    display: grid;
+    flex: 1;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 4px;
+    padding: 4px;
+    border: 2px solid var(--line-strong);
+    border-radius: 7px;
+  }
+
+  .battery__cell {
+    position: relative;
+    display: grid;
+    place-items: center;
+    height: 28px;
+    overflow: hidden;
+    border-radius: 3px;
+    background: color-mix(in srgb, var(--accent) 12%, transparent);
+  }
+
+  .battery__cell.is-full {
+    background: var(--accent);
+  }
+
+  /* İçinde bulunduğum sınıf: hücre tekrar tekrar doluyor (şarj animasyonu) */
+  .battery__cell.is-charging::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: var(--accent);
+    transform-origin: left;
+    animation: charge 2.4s var(--ease-out) infinite;
+  }
+
+  @keyframes charge {
+    0% {
+      transform: scaleX(0.15);
+      opacity: 0.55;
+    }
+    70%,
+    100% {
+      transform: scaleX(1);
+      opacity: 1;
+    }
+  }
+
+  .battery__label {
+    position: relative; /* animasyonlu dolgunun üstünde kalsın */
+    color: var(--accent-ink);
+    font-family: var(--font-mono);
+    font-size: 11px;
+    font-weight: 700;
+  }
+
+  .battery__cell.is-empty .battery__label {
+    color: var(--text-faint);
+  }
+
+  .battery__cap {
+    width: 5px;
+    height: 14px;
+    border-radius: 0 3px 3px 0;
+    background: var(--line-strong);
+  }
+
+  .sheet__note {
+    padding: 0.65rem 1.1rem 1.1rem;
+    color: var(--text-muted);
+    font-family: var(--font-mono);
+    font-size: var(--fs-xs);
+  }
+
+  /* ---------- Hedefler ---------- */
+  .goals__title {
+    margin-top: var(--space-8);
+    font-size: var(--fs-h3);
+    font-weight: 700;
+    font-stretch: 108%;
+  }
+
+  .goals {
+    display: grid;
+    gap: var(--space-4);
+    margin: var(--space-5) 0 0;
+    padding: 0;
+    list-style: none;
+  }
+
+  @media (min-width: 760px) {
+    .goals {
+      grid-template-columns: repeat(3, 1fr);
+    }
+  }
+
+  .goal {
+    padding: var(--space-5);
+    border: 1px solid var(--line);
+    border-radius: var(--radius-l);
+    background: color-mix(in srgb, var(--bg-elev) 60%, transparent);
+    transition:
+      border-color 0.2s,
+      transform 0.2s var(--ease-out);
+  }
+
+  .goal:hover {
+    border-color: var(--accent);
+    transform: translateY(-3px);
+  }
+
+  .goal__num {
+    color: var(--accent);
+    font-family: var(--font-mono);
+    font-size: var(--fs-sm);
+  }
+
+  .goal__title {
+    margin-top: var(--space-3);
+    font-size: 1.1rem;
+    font-weight: 650;
+    font-stretch: 105%;
+    line-height: 1.25;
+  }
+
+  .goal__text {
+    margin-top: var(--space-2);
+    color: var(--text-muted);
+    font-size: 0.95rem;
+  }
+</style>

@@ -1,0 +1,362 @@
+---
+/**
+ * Üst menü. Masaüstünde yatay bağlantılar; 860 px'in altında "hamburger" butonu
+ * ve açılır panel. Bağlantılar gerçek <a href="#bölüm"> etiketleri: tıklanabilir,
+ * klavyeyle gezilebilir ve JavaScript olmadan da çalışır.
+ */
+import { profile, navItems } from '../data/profile';
+import ThemeToggle from './ThemeToggle.astro';
+
+// "Yusuf Asutay" → "yusuf" + "asutay" (Türkçe küçük harf kurallarıyla)
+const [first, ...rest] = profile.name.toLocaleLowerCase('tr-TR').split(' ');
+---
+
+<header class="site-header" data-header>
+  <nav class="container nav" aria-label="Ana menü">
+    <a class="nav__brand" href="#top" aria-label={`${profile.name}, sayfanın başına dön`}>
+      <!-- Küçük çip logosu -->
+      <svg class="nav__logo" viewBox="0 0 32 32" aria-hidden="true" focusable="false">
+        <g class="nav__logo-pins">
+          {
+            [11, 16, 21].map((c) => (
+              <>
+                <rect x={c - 1.2} y="2.5" width="2.4" height="3.5" rx="0.6" />
+                <rect x={c - 1.2} y="26" width="2.4" height="3.5" rx="0.6" />
+                <rect x="2.5" y={c - 1.2} width="3.5" height="2.4" rx="0.6" />
+                <rect x="26" y={c - 1.2} width="3.5" height="2.4" rx="0.6" />
+              </>
+            ))
+          }
+        </g>
+        <rect class="nav__logo-body" x="6" y="6" width="20" height="20" rx="3"></rect>
+        <text class="nav__logo-text" x="16" y="19.3" text-anchor="middle">{profile.initials}</text>
+      </svg>
+      <span class="nav__name">{first}<span class="nav__dot">.</span>{rest.join(' ')}</span>
+    </a>
+
+    <ul class="nav__menu" id="nav-menu" data-nav-menu>
+      {
+        navItems.map((item) => (
+          <li>
+            <a class="nav__link" href={`#${item.id}`} data-nav-link>
+              <span class="nav__designator" aria-hidden="true">
+                {item.designator}
+              </span>
+              {item.label}
+            </a>
+          </li>
+        ))
+      }
+    </ul>
+
+    <!-- Tema anahtarı her ekranda görünür; hamburger yalnızca telefonda/tablette -->
+    <div class="nav__actions">
+      <ThemeToggle />
+      <button class="nav__toggle" type="button" aria-expanded="false" aria-controls="nav-menu" data-nav-toggle>
+        <span class="sr-only" data-nav-toggle-label>Menüyü aç</span>
+        <span class="nav__burger" aria-hidden="true"></span>
+      </button>
+    </div>
+  </nav>
+</header>
+
+<script>
+  const header = document.querySelector<HTMLElement>('[data-header]');
+  const toggle = document.querySelector<HTMLButtonElement>('[data-nav-toggle]');
+  const toggleLabel = document.querySelector<HTMLElement>('[data-nav-toggle-label]');
+  const menu = document.querySelector<HTMLElement>('[data-nav-menu]');
+  const links = Array.from(document.querySelectorAll<HTMLAnchorElement>('[data-nav-link]'));
+
+  // 1) Sayfa kaydırılınca başlığa buzlu cam arka plan ver
+  const onScroll = () => header?.classList.toggle('is-scrolled', window.scrollY > 8);
+  onScroll();
+  window.addEventListener('scroll', onScroll, { passive: true });
+
+  // 2) Mobil menüyü aç / kapat
+  function setMenu(open: boolean) {
+    toggle?.setAttribute('aria-expanded', String(open));
+    if (toggleLabel) toggleLabel.textContent = open ? 'Menüyü kapat' : 'Menüyü aç';
+    menu?.toggleAttribute('data-open', open);
+    header?.classList.toggle('is-open', open);
+  }
+
+  toggle?.addEventListener('click', () => {
+    const open = toggle.getAttribute('aria-expanded') !== 'true';
+    setMenu(open);
+    // Klavyeyle gezenler için: menü açılınca odak ilk bağlantıya geçsin
+    if (open) links[0]?.focus();
+  });
+  links.forEach((link) => link.addEventListener('click', () => setMenu(false)));
+  document.addEventListener('keydown', (event) => {
+    // Esc: açık menüyü kapat ve odağı menü butonuna geri ver
+    if (event.key === 'Escape' && toggle?.getAttribute('aria-expanded') === 'true') {
+      setMenu(false);
+      toggle.focus();
+    }
+  });
+  // Pencere masaüstü genişliğine büyürse açık kalan mobil menüyü kapat
+  window.matchMedia('(min-width: 860px)').addEventListener('change', (event) => {
+    if (event.matches) setMenu(false);
+  });
+
+  // 3) "Scroll spy": ekranın ortasındaki bölümün menü bağlantısını işaretle
+  const sections = links
+    .map((link) => document.getElementById(link.hash.slice(1)))
+    .filter((el): el is HTMLElement => el !== null);
+  const visible = new Set<string>();
+
+  const spy = new IntersectionObserver(
+    (entries) => {
+      for (const entry of entries) {
+        if (entry.isIntersecting) visible.add(entry.target.id);
+        else visible.delete(entry.target.id);
+      }
+      for (const link of links) {
+        if (visible.has(link.hash.slice(1))) link.setAttribute('aria-current', 'true');
+        else link.removeAttribute('aria-current');
+      }
+    },
+    // Gözlem alanını ekranın ortasındaki ince bir şeride daralt
+    { rootMargin: '-45% 0px -50% 0px' },
+  );
+  sections.forEach((section) => spy.observe(section));
+</script>
+
+<style>
+  .site-header {
+    position: sticky;
+    top: 0;
+    z-index: 50;
+    height: var(--header-h);
+    border-bottom: 1px solid transparent;
+    transition:
+      background-color 0.3s,
+      border-color 0.3s;
+  }
+
+  /* Kaydırınca ya da mobil menü açıkken: yarı saydam zemin + bulanıklaştırma */
+  .site-header.is-scrolled,
+  .site-header.is-open {
+    border-bottom-color: var(--line);
+    background: color-mix(in srgb, var(--bg) 80%, transparent);
+    -webkit-backdrop-filter: blur(14px) saturate(140%);
+    backdrop-filter: blur(14px) saturate(140%);
+  }
+
+  .nav {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: var(--space-5);
+    height: 100%;
+  }
+
+  .nav__actions {
+    display: flex;
+    align-items: center;
+    gap: var(--space-3);
+  }
+
+  .nav__brand {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.65rem;
+    margin-right: auto; /* logoyu sola yasla, geri kalan her şey sağa itilsin */
+    font-family: var(--font-mono);
+    font-size: 0.95rem;
+    font-weight: 600;
+    text-decoration: none;
+  }
+
+  .nav__logo {
+    flex: none;
+    width: 34px;
+    height: 34px;
+  }
+
+  .nav__logo-pins rect {
+    fill: var(--pad);
+  }
+
+  .nav__logo-body {
+    fill: var(--chip);
+    stroke: var(--accent);
+    stroke-width: 1.2;
+  }
+
+  .nav__logo-text {
+    font-family: var(--font-mono);
+    font-size: 8.5px;
+    font-weight: 700;
+    fill: var(--accent);
+  }
+
+  .nav__dot {
+    color: var(--accent);
+  }
+
+  .nav__menu {
+    display: flex;
+    gap: var(--space-1);
+    margin: 0;
+    padding: 0;
+    list-style: none;
+  }
+
+  .nav__link {
+    position: relative;
+    display: flex;
+    align-items: center;
+    gap: 0.6rem;
+    padding: 0.55rem 0.8rem;
+    border-radius: var(--radius-m);
+    color: var(--text-muted);
+    font-size: 0.95rem;
+    text-decoration: none;
+    transition:
+      color 0.2s,
+      background-color 0.2s;
+  }
+
+  .nav__link:hover {
+    background: var(--bg-elev);
+    color: var(--text);
+  }
+
+  /* Ekranda olduğumuz bölümün bağlantısı: altında bakır çizgi */
+  .nav__link[aria-current='true'] {
+    color: var(--text);
+  }
+
+  .nav__link[aria-current='true']::after {
+    content: '';
+    position: absolute;
+    right: 0.8rem;
+    bottom: 0.2rem;
+    left: 0.8rem;
+    height: 2px;
+    border-radius: 2px;
+    background: var(--accent);
+  }
+
+  /* Parça etiketleri (U2, J1…) yalnızca mobil menüde görünür */
+  .nav__designator {
+    display: none;
+  }
+
+  .nav__toggle {
+    display: none;
+  }
+
+  /* ---------- 860 px altı: hamburger menü ---------- */
+  @media (max-width: 859px) {
+    .nav__toggle {
+      display: inline-grid;
+      place-items: center;
+      width: 44px;
+      height: 44px;
+      border: 1px solid var(--line-strong);
+      border-radius: var(--radius-m);
+      background: transparent;
+      cursor: pointer;
+    }
+
+    /* Üç çizgi: ortadaki span, üst ve alttakiler ::before / ::after */
+    .nav__burger,
+    .nav__burger::before,
+    .nav__burger::after {
+      display: block;
+      width: 18px;
+      height: 2px;
+      border-radius: 2px;
+      background: currentColor;
+      transition:
+        transform 0.25s var(--ease-out),
+        background-color 0.2s;
+    }
+
+    .nav__burger {
+      position: relative;
+    }
+
+    .nav__burger::before,
+    .nav__burger::after {
+      content: '';
+      position: absolute;
+      left: 0;
+    }
+
+    .nav__burger::before {
+      top: -6px;
+    }
+
+    .nav__burger::after {
+      top: 6px;
+    }
+
+    /* Açıkken üç çizgi X'e dönüşür */
+    [aria-expanded='true'] .nav__burger {
+      background: transparent;
+    }
+
+    [aria-expanded='true'] .nav__burger::before {
+      transform: translateY(6px) rotate(45deg);
+    }
+
+    [aria-expanded='true'] .nav__burger::after {
+      transform: translateY(-6px) rotate(-45deg);
+    }
+
+    .nav__menu {
+      position: fixed;
+      inset: var(--header-h) 0 auto 0;
+      flex-direction: column;
+      gap: 0;
+      padding: var(--space-2) var(--gutter) var(--space-6);
+      border-bottom: 1px solid var(--line);
+      background: var(--bg);
+      box-shadow: 0 30px 40px -20px rgb(0 0 0 / 0.45);
+      /* Kapalıyken görünmez ve tıklanamaz */
+      visibility: hidden;
+      opacity: 0;
+      transform: translateY(-8px);
+      transition:
+        opacity 0.25s,
+        transform 0.25s var(--ease-out),
+        visibility 0s 0.25s;
+    }
+
+    .nav__menu[data-open] {
+      visibility: visible;
+      opacity: 1;
+      transform: none;
+      transition:
+        opacity 0.25s,
+        transform 0.25s var(--ease-out),
+        visibility 0s;
+    }
+
+    .nav__link {
+      padding: 1rem 0.25rem;
+      border-bottom: 1px solid var(--line);
+      border-radius: 0;
+      font-size: 1.15rem;
+    }
+
+    .nav__link:hover {
+      background: transparent;
+    }
+
+    .nav__link[aria-current='true']::after {
+      display: none;
+    }
+
+    .nav__designator {
+      display: inline-block;
+      min-width: 2.6em;
+      font-family: var(--font-mono);
+      font-size: var(--fs-xs);
+      color: var(--accent);
+    }
+  }
+</style>

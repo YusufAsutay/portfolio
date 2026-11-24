@@ -1,0 +1,36 @@
+---
+import { profile } from '../data/profile';
+
+const year = new Date().getFullYear(); // derleme anındaki yıl
+---
+
+<footer class="site-footer">
+  <div class="container site-footer__inner">
+    <p>© {year} {profile.name}</p>
+    <p class="site-footer__meta">
+      Astro ile geliştirildi · <span title="Kartın 4. revizyonu = 4. sınıf">REV 4.0</span>
+    </p>
+  </div>
+</footer>
+
+<style>
+  .site-footer {
+    padding-block: var(--space-6);
+    border-top: 1px solid var(--line);
+    color: var(--text-faint);
+    font-size: var(--fs-sm);
+  }
+
+  .site-footer__inner {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: space-between;
+    gap: var(--space-3);
+  }
+
+  .site-footer__meta {
+    font-family: var(--font-mono);
+    font-size: var(--fs-xs);
+    letter-spacing: 0.06em;
+  }
+</style>

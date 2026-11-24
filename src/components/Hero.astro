@@ -1,0 +1,248 @@
+---
+/**
+ * Hero: sitenin ilk ekranı.
+ * Sol sütun: kimlik (isim, slogan, kısa tanıtım, butonlar, bağlantılar).
+ * Sağ sütun: fotoğrafı taşıyan çip (ChipBoard) ve canlı CAN-Bus monitörü.
+ * Telefonda iki sütun alt alta dizilir.
+ */
+import { profile } from '../data/profile';
+import ChipBoard from './ChipBoard.astro';
+import CanMonitor from './CanMonitor.astro';
+import Icon from './Icon.astro';
+
+const socials = [
+  { label: 'GitHub', href: profile.links.github, icon: 'github', external: true },
+  { label: 'LinkedIn', href: profile.links.linkedin, icon: 'linkedin', external: true },
+  { label: 'E-posta', href: `mailto:${profile.links.email}`, icon: 'mail', external: false },
+] as const;
+---
+
+<section class="hero" aria-labelledby="hero-title">
+  <div class="container hero__grid">
+    <div class="hero__text">
+      {
+        profile.available && (
+          <a class="badge reveal" style="--i: 0" href="#iletisim">
+            <span class="badge__dot" aria-hidden="true" />
+            Yeni fırsatlara açık
+          </a>
+        )
+      }
+
+      <p class="hero__tagline reveal" style="--i: 1">
+        <span class="hero__prompt" aria-hidden="true">~/</span>{profile.tagline}
+      </p>
+
+      <h1 id="hero-title" class="hero__name reveal" style="--i: 2">{profile.name}</h1>
+
+      <p class="hero__slogan reveal" style="--i: 3">
+        {profile.slogan.map((part) => (part.highlight ? <span class="hl">{part.text}</span> : part.text))}
+      </p>
+
+      <p class="hero__lead reveal" style="--i: 4">{profile.intro}</p>
+
+      <div class="hero__actions reveal" style="--i: 5">
+        <a class="btn btn--primary" href="#projeler">
+          Projelerimi incele
+          <Icon name="arrow" size={18} />
+        </a>
+        <a class="btn btn--ghost" href="#hakkimda">Hakkımda</a>
+      </div>
+
+      <ul class="hero__social reveal" style="--i: 6" aria-label="Bağlantılar">
+        {
+          socials.map((s) => (
+            <li>
+              <a
+                href={s.href}
+                aria-label={s.label}
+                title={s.label}
+                target={s.external ? '_blank' : undefined}
+                rel={s.external ? 'noopener noreferrer' : undefined}
+              >
+                <Icon name={s.icon} size={19} />
+              </a>
+            </li>
+          ))
+        }
+      </ul>
+    </div>
+
+    <div class="hero__visual reveal" style="--i: 3">
+      <ChipBoard />
+      <CanMonitor />
+    </div>
+  </div>
+</section>
+
+<style>
+  .hero {
+    display: grid;
+    align-items: center;
+    min-height: calc(100svh - var(--header-h));
+    padding-block: var(--space-7) var(--space-8);
+  }
+
+  .hero__grid {
+    display: grid;
+    gap: var(--space-8);
+    align-items: center;
+  }
+
+  /* 1024 px ve üstü: iki sütun (metin biraz daha geniş) */
+  @media (min-width: 1024px) {
+    .hero__grid {
+      grid-template-columns: minmax(0, 1.1fr) minmax(0, 0.9fr);
+      gap: var(--space-7);
+    }
+  }
+
+  /* ---- "Yeni fırsatlara açık" rozeti ---- */
+  .badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.6rem;
+    padding: 0.4rem 0.9rem 0.4rem 0.75rem;
+    border: 1px solid var(--line-strong);
+    border-radius: 999px;
+    background: color-mix(in srgb, var(--bg-elev) 70%, transparent);
+    color: var(--text-muted);
+    font-family: var(--font-mono);
+    font-size: var(--fs-xs);
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    text-decoration: none;
+    transition:
+      color 0.2s,
+      border-color 0.2s;
+  }
+
+  .badge:hover {
+    border-color: var(--ok);
+    color: var(--text);
+  }
+
+  /* Yeşil "çevrimiçi" LED'i: etrafındaki halka dışa doğru yayılıp kaybolur */
+  .badge__dot {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    background: var(--ok);
+    animation: ping 2.2s var(--ease-out) infinite;
+  }
+
+  @keyframes ping {
+    0% {
+      box-shadow: 0 0 0 0 color-mix(in srgb, var(--ok) 60%, transparent);
+    }
+    80%,
+    100% {
+      box-shadow: 0 0 0 9px transparent;
+    }
+  }
+
+  .hero__tagline {
+    margin-top: var(--space-6);
+    font-family: var(--font-mono);
+    font-size: var(--fs-sm);
+    color: var(--text-muted);
+  }
+
+  .hero__prompt {
+    margin-right: 0.5em;
+    color: var(--accent);
+  }
+
+  /* İsim: genişletilmiş (font-stretch) ve kalın, sitenin imza başlığı */
+  .hero__name {
+    margin-top: var(--space-3);
+    font-size: var(--fs-display);
+    font-weight: 800;
+    font-stretch: 116%;
+    letter-spacing: -0.035em;
+    line-height: 0.94;
+  }
+
+  .hero__slogan {
+    max-width: 24ch;
+    margin-top: var(--space-5);
+    font-size: var(--fs-slogan);
+    font-weight: 500;
+    line-height: 1.3;
+  }
+
+  /* Vurgulu kelimeler ve altlarında akan kare dalga (dijital sinyal) */
+  .hl {
+    --square-wave: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 8' preserveAspectRatio='none'%3E%3Cpath d='M0 1V7H8V1H16V7' fill='none' stroke='black' stroke-width='1.5'/%3E%3C/svg%3E");
+    position: relative;
+    color: var(--accent);
+    white-space: nowrap;
+  }
+
+  .hl::after {
+    content: '';
+    position: absolute;
+    inset: auto 0 -0.24em;
+    height: 0.3em;
+    background: currentColor;
+    opacity: 0.75;
+    /* SVG'yi maske olarak kullanıyoruz: şekli SVG'den, rengi CSS'ten (currentColor) gelir */
+    -webkit-mask: var(--square-wave) repeat-x 0 0 / 0.9em 100%;
+    mask: var(--square-wave) repeat-x 0 0 / 0.9em 100%;
+  }
+
+  @media (prefers-reduced-motion: no-preference) {
+    .hl::after {
+      animation: signal 1.4s linear infinite;
+    }
+  }
+
+  @keyframes signal {
+    to {
+      -webkit-mask-position: 0.9em 0;
+      mask-position: 0.9em 0;
+    }
+  }
+
+  .hero__lead {
+    max-width: 56ch;
+    margin-top: var(--space-5);
+    font-size: var(--fs-lead);
+    color: var(--text-muted);
+  }
+
+  .hero__actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--space-3);
+    margin-top: var(--space-6);
+  }
+
+  .hero__social {
+    display: flex;
+    gap: var(--space-2);
+    margin-top: var(--space-6);
+    padding: 0;
+    list-style: none;
+  }
+
+  .hero__social a {
+    display: grid;
+    place-items: center;
+    width: 44px;
+    height: 44px;
+    border: 1px solid var(--line);
+    border-radius: var(--radius-m);
+    color: var(--text-muted);
+    transition:
+      color 0.2s,
+      border-color 0.2s,
+      transform 0.2s var(--ease-out);
+  }
+
+  .hero__social a:hover {
+    border-color: var(--accent);
+    color: var(--accent);
+    transform: translateY(-2px);
+  }
+</style>

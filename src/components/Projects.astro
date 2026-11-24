@@ -1,0 +1,417 @@
+---
+/**
+ * U4 — Projeler.
+ * Öne çıkan proje (bitirme projesi) tam genişlikte ve bir veri akışı şemasıyla;
+ * diğerleri iki sütunlu kartlar. Ekran görüntüsü kullanmıyoruz: her kartın üst
+ * kenarındaki renk, projenin alanını (gömülü, haberleşme, arayüz, veri) gösterir.
+ * Veriler src/data/projects.ts içinde.
+ */
+import { projects } from '../data/projects';
+import { splitHyphenated } from '../utils/text';
+import Icon from './Icon.astro';
+
+const pad = (n: number) => String(n).padStart(2, '0');
+---
+
+<section id="projeler" class="section" aria-labelledby="projeler-title">
+  <div class="container">
+    <p class="eyebrow"><span class="designator">U4</span>Projeler</p>
+    <h2 id="projeler-title" class="section__title">Protokolden arayüze.</h2>
+    <p class="section__lead">
+      Endüstriyel haberleşme araçlarından makine öğrenmesine; staj, okul ve kişisel projelerimden seçtiklerim.
+    </p>
+
+    <div class="projects">
+      {
+        projects.map((p, i) => (
+          <article
+            class:list={['project', { 'project--featured': p.featured }]}
+            style={`--c: var(--g-${p.domain})`}
+            aria-labelledby={`proje-${p.id}`}
+          >
+            <div class="project__body">
+              <div class="project__meta">
+                <span class="project__num">PRJ-{pad(i + 1)}</span>
+                <span>{p.context}</span>
+                {p.status === 'ongoing' && (
+                  <span class="project__status">
+                    <span class="led" aria-hidden="true" />
+                    Devam ediyor
+                  </span>
+                )}
+                {p.here && (
+                  <span class="project__status">
+                    <span class="led" aria-hidden="true" />
+                    Şu an buradasın
+                  </span>
+                )}
+              </div>
+
+              <h3 id={`proje-${p.id}`} class="project__title">
+                {p.title}
+              </h3>
+              <p class="project__subtitle">
+                {splitHyphenated(p.subtitle).map((part, j) => (j % 2 ? <span class="nowrap">{part}</span> : part))}
+              </p>
+              <p class="project__role">
+                <span>Rol</span>
+                {p.role}
+              </p>
+
+              <ul class="project__points">
+                {p.highlights.map((h) => (
+                  <li>{splitHyphenated(h).map((part, j) => (j % 2 ? <span class="nowrap">{part}</span> : part))}</li>
+                ))}
+              </ul>
+
+              {p.metric && (
+                <p class="project__metric">
+                  <strong>{p.metric.value}</strong>
+                  {p.metric.label}
+                </p>
+              )}
+
+              <ul class="project__tech" aria-label="Kullanılan teknolojiler">
+                {p.tech.map((t) => (
+                  <li>{t}</li>
+                ))}
+              </ul>
+
+              {(p.links?.repo || p.links?.demo) && (
+                <div class="project__links">
+                  {p.links?.repo && (
+                    <a class="btn btn--ghost btn--sm" href={p.links.repo} target="_blank" rel="noopener noreferrer">
+                      <Icon name="github" size={16} />
+                      Kaynak kod
+                    </a>
+                  )}
+                  {p.links?.demo && (
+                    <a class="btn btn--ghost btn--sm" href={p.links.demo} target="_blank" rel="noopener noreferrer">
+                      Canlı site
+                      <Icon name="arrow" size={16} />
+                    </a>
+                  )}
+                </div>
+              )}
+            </div>
+
+            {p.diagram && (
+              <figure class="flow">
+                <figcaption class="flow__caption">Veri akışı</figcaption>
+                <ol class="flow__nodes">
+                  {p.diagram.nodes.map((node, n) => (
+                    <li>
+                      <div class="flow__node">
+                        <span class="flow__title">{node.title}</span>
+                        <span class="flow__detail">{node.detail}</span>
+                      </div>
+                      {n < p.diagram!.links.length && (
+                        <div class="flow__link" style={`--delay: ${n * 0.9}s`}>
+                          <span class="flow__wire" aria-hidden="true">
+                            <span class="flow__dot" />
+                          </span>
+                          <span class="flow__label">{p.diagram!.links[n]}</span>
+                        </div>
+                      )}
+                    </li>
+                  ))}
+                </ol>
+              </figure>
+            )}
+          </article>
+        ))
+      }
+    </div>
+  </div>
+</section>
+
+<style>
+  .projects {
+    display: grid;
+    gap: var(--space-5);
+    margin-top: var(--space-7);
+  }
+
+  /* 860 px ve üstü: iki sütun; öne çıkan proje tam genişlikte.
+     Son kart tek kalırsa o da tam genişliğe yayılır. */
+  @media (min-width: 860px) {
+    .projects {
+      grid-template-columns: repeat(2, 1fr);
+    }
+
+    .project--featured,
+    .project:last-child:nth-child(even) {
+      grid-column: 1 / -1;
+    }
+  }
+
+  /* ---------- Kart ---------- */
+  .project {
+    position: relative;
+    overflow: hidden;
+    padding: var(--space-6);
+    border: 1px solid var(--line);
+    border-radius: var(--radius-l);
+    background: color-mix(in srgb, var(--bg-elev) 70%, transparent);
+    transition:
+      border-color 0.25s,
+      transform 0.25s var(--ease-out),
+      box-shadow 0.25s;
+  }
+
+  /* Üst kenardaki renkli şerit: projenin alanı */
+  .project::before {
+    content: '';
+    position: absolute;
+    inset: 0 0 auto;
+    height: 3px;
+    background: var(--c);
+  }
+
+  .project:hover {
+    border-color: color-mix(in srgb, var(--c) 55%, var(--line));
+    box-shadow: 0 24px 50px -30px rgb(0 0 0 / 0.55);
+    transform: translateY(-3px);
+  }
+
+  .project__meta {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 0.4rem 1rem;
+    color: var(--text-faint);
+    font-family: var(--font-mono);
+    font-size: var(--fs-xs);
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+  }
+
+  .project__num {
+    color: var(--c);
+    font-weight: 700;
+  }
+
+  .project__status {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.45rem;
+    color: var(--text-muted);
+  }
+
+  .project__title {
+    margin-top: var(--space-4);
+    font-size: clamp(1.35rem, 1.15rem + 0.8vw, 1.75rem);
+    font-weight: 750;
+    font-stretch: 108%;
+    letter-spacing: -0.015em;
+    line-height: 1.15;
+  }
+
+  .project--featured .project__title {
+    font-size: clamp(1.6rem, 1.2rem + 1.5vw, 2.3rem);
+  }
+
+  .project__subtitle {
+    margin-top: var(--space-2);
+    color: var(--text-muted);
+  }
+
+  .project__role {
+    margin-top: var(--space-4);
+    font-size: var(--fs-sm);
+  }
+
+  .project__role span {
+    margin-right: 0.6rem;
+    color: var(--c);
+    font-family: var(--font-mono);
+    font-size: var(--fs-xs);
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+  }
+
+  .project__points {
+    display: grid;
+    gap: var(--space-2);
+    margin: var(--space-4) 0 0;
+    padding: 0;
+    list-style: none;
+  }
+
+  /* Madde işareti: kısa bir devre yolu çizgisi */
+  .project__points li {
+    position: relative;
+    padding-left: 1.3rem;
+    color: var(--text-muted);
+    font-size: 0.97rem;
+  }
+
+  .project__points li::before {
+    content: '';
+    position: absolute;
+    top: 0.72em;
+    left: 0;
+    width: 9px;
+    height: 2px;
+    background: var(--c);
+  }
+
+  .project__metric {
+    display: inline-flex;
+    align-items: baseline;
+    gap: 0.6rem;
+    margin-top: var(--space-4);
+    padding: 0.5rem 0.9rem;
+    border: 1px dashed color-mix(in srgb, var(--c) 60%, transparent);
+    border-radius: var(--radius-m);
+    color: var(--text-muted);
+    font-family: var(--font-mono);
+    font-size: var(--fs-xs);
+  }
+
+  .project__metric strong {
+    color: var(--c);
+    font-size: 1.35rem;
+    font-weight: 700;
+  }
+
+  .project__tech {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.4rem;
+    margin: var(--space-5) 0 0;
+    padding: 0;
+    list-style: none;
+  }
+
+  .project__tech li {
+    padding: 0.25rem 0.6rem;
+    border: 1px solid var(--line-strong);
+    border-radius: 999px;
+    color: var(--text-muted);
+    font-family: var(--font-mono);
+    font-size: 0.74rem;
+  }
+
+  .project__links {
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--space-2);
+    margin-top: var(--space-5);
+  }
+
+  /* ---------- Öne çıkan proje: solda metin, sağda şema ---------- */
+  .project--featured {
+    display: grid;
+    gap: var(--space-6);
+    padding: clamp(1.5rem, 1rem + 2vw, 2.75rem);
+  }
+
+  @media (min-width: 960px) {
+    .project--featured {
+      grid-template-columns: minmax(0, 1.35fr) minmax(0, 1fr);
+      align-items: center;
+      gap: var(--space-8);
+    }
+  }
+
+  /* ---------- Veri akışı şeması (terminal paneli renkleriyle) ---------- */
+  .flow {
+    margin: 0;
+    padding: var(--space-5);
+    border: 1px solid color-mix(in srgb, var(--monitor-text) 14%, transparent);
+    border-radius: var(--radius-l);
+    background: var(--monitor-bg);
+    color: var(--monitor-text);
+    font-family: var(--font-mono);
+  }
+
+  .flow__caption {
+    margin-bottom: var(--space-4);
+    font-size: var(--fs-xs);
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    opacity: 0.6;
+  }
+
+  .flow__nodes {
+    margin: 0;
+    padding: 0;
+    list-style: none;
+  }
+
+  .flow__node {
+    display: grid;
+    gap: 0.15rem;
+    padding: 0.8rem 1rem;
+    border: 1px solid color-mix(in srgb, var(--monitor-text) 18%, transparent);
+    border-radius: var(--radius-m);
+    background: color-mix(in srgb, var(--monitor-text) 4%, transparent);
+  }
+
+  .flow__title {
+    font-family: var(--font-sans);
+    font-size: 1rem;
+    font-weight: 650;
+  }
+
+  .flow__detail {
+    font-size: var(--fs-xs);
+    opacity: 0.65;
+  }
+
+  /* Düğümler arasındaki hat: içinden veri noktası akar, yanında protokol adı */
+  .flow__link {
+    display: flex;
+    align-items: center;
+    gap: 0.9rem;
+    height: 56px;
+    padding-left: 1.4rem;
+  }
+
+  .flow__wire {
+    position: relative;
+    width: 2px;
+    height: 100%;
+    background: color-mix(in srgb, var(--monitor-accent) 45%, transparent);
+  }
+
+  .flow__dot {
+    position: absolute;
+    top: 0;
+    left: -2px;
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+    background: var(--monitor-accent);
+    box-shadow: 0 0 8px var(--monitor-accent);
+    opacity: 0;
+  }
+
+  @media (prefers-reduced-motion: no-preference) {
+    .flow__dot {
+      animation: packet 1.8s ease-in-out var(--delay, 0s) infinite;
+    }
+  }
+
+  @keyframes packet {
+    0% {
+      transform: translateY(0);
+      opacity: 0;
+    }
+    15%,
+    85% {
+      opacity: 1;
+    }
+    100% {
+      transform: translateY(50px);
+      opacity: 0;
+    }
+  }
+
+  .flow__label {
+    color: var(--monitor-accent);
+    font-size: var(--fs-xs);
+    letter-spacing: 0.06em;
+  }
+</style>

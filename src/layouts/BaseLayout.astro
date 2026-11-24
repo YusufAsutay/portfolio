@@ -1,0 +1,71 @@
+---
+/**
+ * Bütün sayfaların ortak iskeleti: <head> (başlık, açıklama, paylaşım kartı
+ * etiketleri, fontlar), "içeriğe geç" bağlantısı, menü, içerik ve footer.
+ */
+
+// Fontları npm paketinden alıyoruz: dosyalar derlemede sitenin içine kopyalanır.
+import '@fontsource-variable/archivo/wdth.css'; // kalınlık (100–900) + genişlik (%62–125) eksenleri
+import '@fontsource-variable/jetbrains-mono/wght.css';
+import '../styles/tokens.css';
+import '../styles/global.css';
+
+import Navbar from '../components/Navbar.astro';
+import Footer from '../components/Footer.astro';
+import { profile } from '../data/profile';
+
+interface Props {
+  title?: string;
+  description?: string;
+}
+
+const {
+  title = `${profile.name} — Gömülü Sistemler & Yazılım Geliştirme`,
+  description = profile.description,
+} = Astro.props;
+
+// Kanonik adres: "www'lu, www'suz ya da ?parametreli kopyalar değil, asıl adres bu"
+// diye arama motorlarına söyler. Astro.site, astro.config.mjs'teki "site" değeridir.
+const canonical = new URL(Astro.url.pathname, Astro.site);
+---
+
+<!doctype html>
+<html lang="tr" data-theme="dark">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>{title}</title>
+    <meta name="description" content={description} />
+    <link rel="canonical" href={canonical} />
+    <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
+    <meta name="theme-color" content="#12110f" />
+
+    <script is:inline>
+      // Ziyaretçinin seçtiği temayı, sayfa ekrana çizilmeden ÖNCE uygula.
+      // Sonra uygulasaydık sayfa bir an koyu görünüp açığa dönerdi ("flaş").
+      try {
+        if (localStorage.getItem('theme') === 'light') {
+          document.documentElement.dataset.theme = 'light';
+          document.querySelector('meta[name="theme-color"]').setAttribute('content', '#f2efe7');
+        }
+      } catch (e) {}
+    </script>
+
+    <!-- Open Graph: LinkedIn, WhatsApp vb. uygulamalarda link önizleme kartı -->
+    <meta property="og:type" content="website" />
+    <meta property="og:locale" content="tr_TR" />
+    <meta property="og:site_name" content={profile.name} />
+    <meta property="og:title" content={title} />
+    <meta property="og:description" content={description} />
+    <meta property="og:url" content={canonical} />
+    <!-- og:image (paylaşım görseli) yayın aşamasında eklenecek -->
+  </head>
+  <body>
+    <a class="skip-link" href="#main">İçeriğe geç</a>
+    <Navbar />
+    <main id="main">
+      <slot />
+    </main>
+    <Footer />
+  </body>
+</html>

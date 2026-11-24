@@ -1,0 +1,395 @@
+---
+/**
+ * J1 — İletişim. Devre kartlarında "J" konnektör demektir: kartın dış dünyayla
+ * bağlantı noktası. Solda doğrudan bağlantılar (e-posta kopyalama düğmesiyle),
+ * sağda mesaj formu.
+ *
+ * Form iki şekilde çalışır (ayar profile.ts → contact.formEndpoint):
+ *  1) Boşsa: "Gönder"e basınca ziyaretçinin e-posta uygulaması, mesaj hazır
+ *     yazılmış hâlde açılır. Sunucu ya da üyelik gerekmez.
+ *  2) Formspree gibi bir form servisinin adresi yazılırsa: mesaj, sayfadan
+ *     ayrılmadan o servise gönderilir; servis de sana e-postayla iletir.
+ */
+import { profile } from '../data/profile';
+import Icon from './Icon.astro';
+
+const { email, linkedin, github } = profile.links;
+const endpoint = profile.contact.formEndpoint;
+
+// "https://www.linkedin.com/in/yusufasutay/" → "linkedin.com/in/yusufasutay"
+const pretty = (url: string) => url.replace(/^https?:\/\/(www\.)?/, '').replace(/\/$/, '');
+
+// lang: etiketler büyük harfle yazılıyor. Türkçe kuralıyla "GitHub" → "GİTHUB" olurdu;
+// İngilizce marka adlarına lang="en" vererek "GITHUB" yazılmasını sağlıyoruz.
+const channels = [
+  { label: 'E-posta', lang: 'tr', value: email, href: `mailto:${email}`, icon: 'mail', copy: true, external: false },
+  { label: 'LinkedIn', lang: 'en', value: pretty(linkedin), href: linkedin, icon: 'linkedin', copy: false, external: true },
+  { label: 'GitHub', lang: 'en', value: pretty(github), href: github, icon: 'github', copy: false, external: true },
+] as const;
+---
+
+<section id="iletisim" class="section" aria-labelledby="iletisim-title">
+  <div class="container contact">
+    <div>
+      <p class="eyebrow"><span class="designator">J1</span>İletişim</p>
+      <h2 id="iletisim-title" class="section__title">Bağlantı kuralım.</h2>
+      <p class="section__lead">Staj, yeni mezun pozisyonları ya da proje iş birlikleri için bana yazabilirsin.</p>
+
+      <!-- Konnektörün bacakları gibi numaralı bağlantılar -->
+      <ul class="channels">
+        {
+          channels.map((c, i) => (
+            <li class="channel">
+              <span class="channel__pin" aria-hidden="true">
+                {i + 1}
+              </span>
+              <span class="channel__icon" aria-hidden="true">
+                <Icon name={c.icon} size={18} />
+              </span>
+              <span class="channel__text">
+                <span class="channel__label" lang={c.lang}>
+                  {c.label}
+                </span>
+                <a
+                  class="channel__value"
+                  href={c.href}
+                  target={c.external ? '_blank' : undefined}
+                  rel={c.external ? 'noopener noreferrer' : undefined}
+                >
+                  {c.value}
+                </a>
+              </span>
+              {c.copy && (
+                <button type="button" class="channel__copy" data-copy={c.value}>
+                  <span data-copy-label>Kopyala</span>
+                </button>
+              )}
+            </li>
+          ))
+        }
+      </ul>
+    </div>
+
+    <form class="form" data-contact-form data-to={email} data-endpoint={endpoint}>
+      <p class="form__title">Mesaj gönder</p>
+
+      <div class="form__field">
+        <label for="cf-name">Ad soyad</label>
+        <input id="cf-name" name="name" type="text" autocomplete="name" required maxlength="80" />
+      </div>
+
+      <div class="form__field">
+        <label for="cf-email">E-posta adresin</label>
+        <input id="cf-email" name="email" type="email" autocomplete="email" required maxlength="120" />
+      </div>
+
+      <div class="form__field">
+        <label for="cf-message">Mesajın</label>
+        <textarea id="cf-message" name="message" rows="5" required maxlength="3000"></textarea>
+      </div>
+
+      <!-- Bot tuzağı (honeypot): insanlar bu alanı görmez, otomatik spam botları doldurur -->
+      <div class="form__trap" aria-hidden="true">
+        <label for="cf-website">Web siten</label>
+        <input id="cf-website" name="website" type="text" tabindex="-1" autocomplete="off" />
+      </div>
+
+      <button class="btn btn--primary form__submit" type="submit">
+        Gönder
+        <Icon name="arrow" size={18} />
+      </button>
+
+      <p class="form__note">
+        {
+          endpoint
+            ? 'Mesajın doğrudan bana iletilir.'
+            : "Gönder'e basınca e-posta uygulaman açılır; mesajın hazır yazılmış gelir."
+        }
+      </p>
+      <p class="form__status" role="status" aria-live="polite" data-form-status></p>
+    </form>
+  </div>
+</section>
+
+<script>
+  // ---- E-posta adresini panoya kopyala ----
+  document.querySelectorAll<HTMLButtonElement>('[data-copy]').forEach((button) => {
+    const label = button.querySelector<HTMLElement>('[data-copy-label]');
+    button.addEventListener('click', async () => {
+      try {
+        await navigator.clipboard.writeText(button.dataset.copy ?? '');
+        button.dataset.state = 'done';
+        if (label) label.textContent = 'Kopyalandı ✓';
+      } catch {
+        if (label) label.textContent = 'Kopyalanamadı';
+      }
+      // 2 saniye sonra düğmeyi eski hâline döndür
+      setTimeout(() => {
+        delete button.dataset.state;
+        if (label) label.textContent = 'Kopyala';
+      }, 2000);
+    });
+  });
+
+  // ---- İletişim formu ----
+  // Tarayıcı, "required" ve type="email" kurallarını kendisi denetler:
+  // alanlar hatalıysa "submit" olayı hiç tetiklenmez.
+  const form = document.querySelector<HTMLFormElement>('[data-contact-form]');
+  const status = form?.querySelector<HTMLElement>('[data-form-status]');
+  const show = (text: string) => {
+    if (status) status.textContent = text;
+  };
+
+  form?.addEventListener('submit', async (event) => {
+    event.preventDefault(); // sayfanın yeniden yüklenmesini engelle
+    const data = new FormData(form);
+    if (String(data.get('website') ?? '') !== '') return; // bot tuzağı doluysa sessizce çık
+
+    const name = String(data.get('name') ?? '').trim();
+    const email = String(data.get('email') ?? '').trim();
+    const message = String(data.get('message') ?? '').trim();
+    const endpoint = form.dataset.endpoint;
+
+    // 1) Form servisi tanımlıysa: mesajı arka planda gönder
+    if (endpoint) {
+      show('Gönderiliyor…');
+      try {
+        const response = await fetch(endpoint, {
+          method: 'POST',
+          body: data,
+          headers: { Accept: 'application/json' },
+        });
+        if (!response.ok) throw new Error(String(response.status));
+        form.reset();
+        show('Teşekkürler! Mesajın ulaştı.');
+      } catch {
+        show(`Mesaj gönderilemedi. Doğrudan ${form.dataset.to} adresine yazabilirsin.`);
+      }
+      return;
+    }
+
+    // 2) Servis yoksa: ziyaretçinin e-posta uygulamasında hazır bir taslak aç
+    const subject = `Portfolyo üzerinden mesaj — ${name}`;
+    const body = `${message}\n\n${name}\n${email}`;
+    window.location.href = `mailto:${form.dataset.to}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
+    show('E-posta uygulaman açılıyor; mesajın hazır, yalnızca göndermen gerekiyor.');
+  });
+</script>
+
+<style>
+  .contact {
+    display: grid;
+    gap: var(--space-7);
+    align-items: start;
+  }
+
+  @media (min-width: 960px) {
+    .contact {
+      grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+      gap: var(--space-8);
+    }
+  }
+
+  /* ---------- Bağlantı listesi ---------- */
+  .channels {
+    display: grid;
+    gap: var(--space-3);
+    margin: var(--space-6) 0 0;
+    padding: 0;
+    list-style: none;
+  }
+
+  .channel {
+    display: grid;
+    grid-template-columns: auto auto minmax(0, 1fr) auto;
+    align-items: center;
+    gap: var(--space-3);
+    padding: 0.85rem 1rem;
+    border: 1px solid var(--line);
+    border-radius: var(--radius-l);
+    background: color-mix(in srgb, var(--bg-elev) 70%, transparent);
+    transition: border-color 0.2s;
+  }
+
+  .channel:hover {
+    border-color: var(--accent);
+  }
+
+  .channel__pin {
+    display: grid;
+    place-items: center;
+    width: 26px;
+    height: 22px;
+    border-radius: 4px;
+    background: var(--accent);
+    color: var(--accent-ink);
+    font-family: var(--font-mono);
+    font-size: 11px;
+    font-weight: 700;
+  }
+
+  .channel__icon {
+    display: grid;
+    color: var(--text-muted);
+  }
+
+  .channel__text {
+    display: grid;
+    min-width: 0;
+  }
+
+  .channel__label {
+    color: var(--text-faint);
+    font-family: var(--font-mono);
+    font-size: var(--fs-xs);
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+  }
+
+  /* Uzun adresler taşmasın: sığmazsa sonu "…" ile kısalır */
+  .channel__value {
+    overflow: hidden;
+    font-weight: 500;
+    text-decoration: none;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .channel__value:hover {
+    color: var(--accent);
+    text-decoration: underline;
+  }
+
+  .channel__copy {
+    padding: 0.4rem 0.75rem;
+    border: 1px solid var(--line-strong);
+    border-radius: 999px;
+    background: transparent;
+    color: var(--text-muted);
+    font-family: var(--font-mono);
+    font-size: var(--fs-xs);
+    cursor: pointer;
+    transition:
+      color 0.2s,
+      border-color 0.2s;
+  }
+
+  .channel__copy:hover {
+    border-color: var(--accent);
+    color: var(--text);
+  }
+
+  .channel__copy[data-state='done'] {
+    border-color: var(--ok);
+    color: var(--text);
+  }
+
+  /* Dar telefonlarda "Kopyala" düğmesi adresin altına iner; adres kesilmeden sığar */
+  @media (max-width: 480px) {
+    .channel {
+      grid-template-columns: auto auto minmax(0, 1fr);
+    }
+
+    .channel__value {
+      font-size: 0.95rem;
+    }
+
+    .channel__copy {
+      grid-column: 3;
+      justify-self: start;
+    }
+  }
+
+  /* ---------- Form ---------- */
+  .form {
+    position: relative;
+    display: grid;
+    gap: var(--space-4);
+    padding: clamp(1.25rem, 1rem + 1.5vw, 2rem);
+    border: 1px solid var(--line-strong);
+    border-radius: var(--radius-l);
+    background: var(--bg-elev);
+    box-shadow: 0 30px 60px -40px rgb(0 0 0 / 0.5);
+  }
+
+  .form__title {
+    color: var(--accent);
+    font-family: var(--font-mono);
+    font-size: var(--fs-xs);
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+  }
+
+  .form__field {
+    display: grid;
+    gap: 0.4rem;
+  }
+
+  .form__field label {
+    font-size: var(--fs-sm);
+    font-weight: 600;
+  }
+
+  .form__field input,
+  .form__field textarea {
+    width: 100%;
+    padding: 0.75rem 0.9rem;
+    border: 1px solid var(--line-strong);
+    border-radius: var(--radius-m);
+    background: var(--bg);
+    color: var(--text);
+    font-size: 1rem; /* 16px altı yazı, iPhone'da sayfayı yakınlaştırır */
+    transition:
+      border-color 0.2s,
+      box-shadow 0.2s;
+  }
+
+  .form__field textarea {
+    min-height: 130px;
+    resize: vertical;
+  }
+
+  .form__field input:focus-visible,
+  .form__field textarea:focus-visible {
+    border-color: var(--accent);
+    outline: none;
+    box-shadow: 0 0 0 3px rgb(var(--glow) / 0.25);
+  }
+
+  /* Ziyaretçi alanla etkileşime girdikten sonra hâlâ hatalıysa kırmızı çerçeve */
+  .form__field input:user-invalid,
+  .form__field textarea:user-invalid {
+    border-color: var(--danger);
+  }
+
+  /* Bot tuzağı: ekranın dışında, görünmez */
+  .form__trap {
+    position: absolute;
+    left: -10000px;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+  }
+
+  .form__submit {
+    justify-self: start;
+    cursor: pointer;
+  }
+
+  .form__note {
+    color: var(--text-faint);
+    font-size: var(--fs-sm);
+  }
+
+  .form__status {
+    padding: 0.6rem 0.8rem;
+    border-left: 3px solid var(--ok);
+    border-radius: 4px;
+    background: color-mix(in srgb, var(--ok) 10%, transparent);
+    font-size: var(--fs-sm);
+  }
+
+  .form__status:empty {
+    display: none;
+  }
+</style>

@@ -1,0 +1,283 @@
+/* =====================================================================
+   GENEL STİLLER
+   Sıfırlama, temel tipografi ve birden çok bileşenin kullandığı ortak
+   sınıflar (buton, bölüm etiketi, giriş animasyonu).
+   Bileşenlerin kendine özel stilleri, kendi .astro dosyalarının içinde.
+   ===================================================================== */
+
+/* ---- 1) Sıfırlama: tarayıcıların farklı varsayılanlarını eşitler ---- */
+*,
+*::before,
+*::after {
+  box-sizing: border-box; /* genişliğe padding ve kenarlık da dahil olsun */
+}
+
+* {
+  margin: 0;
+}
+
+html {
+  -webkit-text-size-adjust: 100%;
+  text-size-adjust: 100%;
+  /* Menüden bir bölüme atlayınca başlık, yapışkan menünün altında kalmasın */
+  scroll-padding-top: calc(var(--header-h) + 12px);
+}
+
+/* Yumuşak kaydırma yalnızca "hareketi azalt" tercihi olmayanlarda */
+@media (prefers-reduced-motion: no-preference) {
+  html {
+    scroll-behavior: smooth;
+  }
+}
+
+body {
+  min-height: 100svh;
+  font-family: var(--font-sans);
+  font-size: var(--fs-base);
+  line-height: 1.6;
+  color: var(--text);
+  background: var(--bg-pattern), var(--bg);
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+img,
+svg,
+video {
+  display: block;
+  max-width: 100%;
+}
+
+img {
+  height: auto;
+}
+
+button,
+input,
+textarea,
+select {
+  font: inherit;
+  color: inherit;
+}
+
+a {
+  color: inherit;
+  text-decoration-thickness: 1px;
+  text-underline-offset: 0.2em;
+}
+
+h1,
+h2,
+h3 {
+  line-height: 1.08;
+  text-wrap: balance; /* başlık satırlarını dengeli böl */
+}
+
+p {
+  text-wrap: pretty; /* paragrafın son satırında tek kelime kalmasın */
+}
+
+::selection {
+  background: rgb(var(--glow) / 0.35);
+  color: var(--text);
+}
+
+/* Klavyeyle gezinenler için belirgin odak halkası (fareyle tıklayınca çıkmaz) */
+:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 3px;
+  border-radius: var(--radius-s);
+}
+
+/* ---- 2) Yerleşim ---- */
+.container {
+  width: min(100% - 2 * var(--gutter), var(--container));
+  margin-inline: auto;
+}
+
+.section {
+  padding-block: clamp(4.5rem, 2.5rem + 6vw, 8rem);
+}
+
+/* Bölüm başlığı ve altındaki açıklama: her bölüm aynı düzeni kullanır */
+.section__title {
+  margin-top: var(--space-4);
+  font-size: var(--fs-h2);
+  font-weight: 750;
+  font-stretch: 112%;
+  letter-spacing: -0.025em;
+}
+
+.section__lead {
+  max-width: 60ch;
+  margin-top: var(--space-4);
+  font-size: var(--fs-lead);
+  color: var(--text-muted);
+}
+
+/* ---- 3) Erişilebilirlik yardımcıları ---- */
+
+/* Ekranda görünmez ama ekran okuyucu okur */
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  white-space: nowrap;
+  border: 0;
+}
+
+/* Satır sonunda bölünmesin (ör. "CAN-Bus" tireden ikiye ayrılmasın) */
+.nowrap {
+  white-space: nowrap;
+}
+
+/* "İçeriğe geç": klavye kullanıcısı ilk Tab'da menüyü atlayabilsin */
+.skip-link {
+  position: absolute;
+  left: var(--space-4);
+  top: -100px;
+  z-index: 100;
+  padding: var(--space-2) var(--space-4);
+  border-radius: var(--radius-m);
+  background: var(--accent);
+  color: var(--accent-ink);
+  font-weight: 600;
+  text-decoration: none;
+}
+
+.skip-link:focus {
+  top: var(--space-3);
+}
+
+/* ---- 4) Bölüm üst etiketi: "U2  HAKKIMDA" ----
+   Devre kartlarında her parçanın etiketi vardır: U = entegre, J = konnektör. */
+.eyebrow {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-3);
+  font-family: var(--font-mono);
+  font-size: var(--fs-xs);
+  letter-spacing: 0.14em;
+  text-transform: uppercase; /* <html lang="tr"> sayesinde i → İ doğru büyür */
+  color: var(--text-muted);
+}
+
+.designator {
+  display: inline-grid;
+  place-items: center;
+  min-width: 2.6em;
+  padding: 0.2em 0.5em;
+  border: 1px solid var(--line-strong);
+  border-radius: var(--radius-s);
+  color: var(--accent);
+  font-weight: 600;
+  letter-spacing: 0.04em;
+}
+
+/* ---- 5) Butonlar ---- */
+.btn {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+  padding: 0.85rem 1.35rem;
+  border: 1px solid transparent;
+  border-radius: var(--radius-m);
+  font-size: 0.98rem;
+  font-weight: 600;
+  text-decoration: none;
+  transition:
+    transform 0.2s var(--ease-out),
+    background-color 0.2s,
+    border-color 0.2s,
+    color 0.2s;
+}
+
+.btn--primary {
+  background: var(--accent);
+  color: var(--accent-ink);
+  box-shadow: 0 10px 30px -14px rgb(var(--glow) / 0.8);
+}
+
+.btn--primary:hover {
+  background: var(--accent-strong);
+  transform: translateY(-2px);
+}
+
+.btn--ghost {
+  border-color: var(--line-strong);
+  color: var(--text);
+}
+
+.btn--ghost:hover {
+  border-color: var(--accent);
+  color: var(--accent);
+}
+
+.btn--sm {
+  padding: 0.55rem 0.95rem;
+  font-size: 0.9rem;
+}
+
+.btn .icon {
+  transition: transform 0.2s var(--ease-out);
+}
+
+.btn:hover .icon {
+  transform: translateX(3px);
+}
+
+/* Yeşil LED: "çalışıyor / devam ediyor" işareti (yetenekler, projeler) */
+.led {
+  display: inline-block;
+  flex: none;
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: var(--ok);
+  box-shadow: 0 0 6px var(--ok);
+  animation: led 1.8s ease-in-out infinite;
+}
+
+@keyframes led {
+  50% {
+    opacity: 0.35;
+  }
+}
+
+/* ---- 6) Giriş animasyonu ----
+   .reveal sınıfı olan öğeler sayfa açılınca aşağıdan yukarı belirir.
+   style="--i: 2" ile verilen sıra numarası gecikmeyi belirler (2 × 80 ms). */
+@media (prefers-reduced-motion: no-preference) {
+  .reveal {
+    animation: rise 0.9s var(--ease-out) both;
+    animation-delay: calc(var(--i, 0) * 80ms + 120ms);
+  }
+}
+
+@keyframes rise {
+  from {
+    opacity: 0;
+    transform: translateY(18px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+/* ---- 7) "Hareketi azalt" tercihi ----
+   Windows'ta: Ayarlar › Erişilebilirlik › Görsel efektler › Animasyon efektleri.
+   Bu ayarı kapatan ziyaretçide bütün animasyon ve geçişler durur. */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}

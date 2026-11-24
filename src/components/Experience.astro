@@ -1,0 +1,168 @@
+---
+/**
+ * U5 — Deneyim, "git log" görünümünde bir zaman çizelgesi.
+ * En yeni adım en üstte ve "HEAD → main" etiketini taşır (git'te HEAD, şu an
+ * üzerinde çalıştığın yeri gösterir). Her adımın yanındaki 7 haneli kimlik,
+ * git'teki kısa commit hash'i gibi başlıktan türetilir: süs ama her derlemede aynı.
+ * Veriler src/data/experience.ts içinde.
+ */
+import { experience } from '../data/experience';
+import { splitHyphenated } from '../utils/text';
+
+// FNV-1a: metinden kısa ve kararlı bir "hash" üretir
+function shortHash(text: string) {
+  let h = 0x811c9dc5;
+  for (const ch of text) {
+    h ^= ch.codePointAt(0) ?? 0;
+    h = Math.imul(h, 0x01000193);
+  }
+  return (h >>> 0).toString(16).padStart(8, '0').slice(0, 7);
+}
+---
+
+<section id="deneyim" class="section" aria-labelledby="deneyim-title">
+  <div class="container">
+    <p class="eyebrow"><span class="designator">U5</span>Deneyim</p>
+    <h2 id="deneyim-title" class="section__title">Commit geçmişim.</h2>
+    <p class="section__lead">Yolculuğumun önemli adımları; en yenisi en üstte.</p>
+
+    <ol class="log">
+      {
+        experience.map((e) => (
+          <li class="log__entry" style={`--c: var(--g-${e.domain})`}>
+            <div class="log__head">
+              <span class="log__hash" aria-hidden="true">
+                {shortHash(e.role + e.org)}
+              </span>
+              {e.head && <span class="log__ref">HEAD → main</span>}
+              <span class="log__when">{e.when}</span>
+            </div>
+            <h3 class="log__role">{e.role}</h3>
+            <p class="log__org">
+              {splitHyphenated(e.org).map((part, j) => (j % 2 ? <span class="nowrap">{part}</span> : part))}
+            </p>
+            <p class="log__summary">
+              {splitHyphenated(e.summary).map((part, j) => (j % 2 ? <span class="nowrap">{part}</span> : part))}
+            </p>
+            {e.tags.length > 0 && (
+              <ul class="log__tags" aria-label="Kullanılan teknolojiler">
+                {e.tags.map((t) => (
+                  <li>{t}</li>
+                ))}
+              </ul>
+            )}
+          </li>
+        ))
+      }
+    </ol>
+  </div>
+</section>
+
+<style>
+  .log {
+    position: relative;
+    max-width: 860px;
+    margin: var(--space-7) 0 0;
+    padding: 0;
+    list-style: none;
+  }
+
+  /* Soldaki dikey hat: "git log --graph" çıktısındaki dal çizgisi */
+  .log::before {
+    content: '';
+    position: absolute;
+    top: 12px;
+    bottom: 12px;
+    left: 7px;
+    width: 2px;
+    background: linear-gradient(var(--line-strong), var(--line));
+  }
+
+  .log__entry {
+    position: relative;
+    padding: 0 0 var(--space-7) var(--space-7);
+  }
+
+  .log__entry:last-child {
+    padding-bottom: 0;
+  }
+
+  /* Commit düğümü: içi boş halka */
+  .log__entry::before {
+    content: '';
+    position: absolute;
+    top: 3px;
+    left: 0;
+    width: 16px;
+    height: 16px;
+    border: 3px solid var(--c);
+    border-radius: 50%;
+    background: var(--bg);
+  }
+
+  .log__head {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 0.4rem 0.8rem;
+    font-family: var(--font-mono);
+    font-size: var(--fs-xs);
+  }
+
+  .log__hash {
+    color: var(--c);
+    font-weight: 700;
+    letter-spacing: 0.04em;
+  }
+
+  .log__ref {
+    padding: 0.1rem 0.55rem;
+    border: 1px solid var(--ok);
+    border-radius: 999px;
+    color: var(--text);
+  }
+
+  .log__when {
+    color: var(--text-faint);
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+  }
+
+  .log__role {
+    margin-top: var(--space-3);
+    font-size: var(--fs-h3);
+    font-weight: 700;
+    font-stretch: 106%;
+    line-height: 1.25;
+  }
+
+  .log__org {
+    margin-top: var(--space-1);
+    color: var(--accent);
+    font-weight: 500;
+  }
+
+  .log__summary {
+    max-width: 64ch;
+    margin-top: var(--space-3);
+    color: var(--text-muted);
+  }
+
+  .log__tags {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.4rem;
+    margin: var(--space-4) 0 0;
+    padding: 0;
+    list-style: none;
+  }
+
+  .log__tags li {
+    padding: 0.25rem 0.6rem;
+    border: 1px solid var(--line-strong);
+    border-radius: 999px;
+    color: var(--text-muted);
+    font-family: var(--font-mono);
+    font-size: 0.74rem;
+  }
+</style>
