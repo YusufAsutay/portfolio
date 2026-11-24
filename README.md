@@ -40,12 +40,16 @@ scripts/deploy.sh        → sunucuda güncelleme betiği
 
 ## Yayına alma
 
-Akış: **bilgisayar → GitHub → sunucu**.
+Akış: **bilgisayar → GitHub (derleme) → sunucu**.
 
 1. Bilgisayarda değişikliği GitHub'a gönder:
    `git add -A` → `git commit -m "açıklama"` → `git push`
-2. Sunucuda (Termius) tek komut:
+2. GitHub Actions ([yayin.yml](.github/workflows/yayin.yml)) siteyi derler ve hazır
+   dosyaları `yayin` dalına koyar (1–2 dakika; deponun **Actions** sekmesinden izlenir).
+3. Sunucuda (Termius) tek komut:
    `bash ~/portfolio/scripts/deploy.sh`
 
-Betik sırasıyla `git pull`, `npm ci`, `npm run build` çalıştırır ve `dist/` içeriğini
-Apache'nin yayın klasörüne (`/var/www/yusufasty.com.tr/html`) kopyalar.
+Betik `yayin` dalındaki hazır siteyi indirir ve Apache'nin yayın klasörüne
+(`/var/www/yusufasty.com.tr/html`) kopyalar. Site sunucuda derlenmez: sunucunun sanal
+işlemcisi, derleme araçlarının kullandığı bazı işlemci komutlarını desteklemiyor
+("Illegal instruction" hatası). Bu yüzden sunucuda Node.js'e gerek yoktur.
